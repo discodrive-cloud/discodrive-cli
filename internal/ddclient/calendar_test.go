@@ -155,6 +155,7 @@ func TestNormalizeDate(t *testing.T) {
 
 // CreateEvent must normalize the body it sends and reject values the server would drop.
 func TestCreateEventNormalizesBody(t *testing.T) {
+	t.Setenv("TZ", "Europe/Berlin") // recurring events need an IANA zone; Windows exposes none
 	bodies := make(chan map[string]any, 4)
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /auth/device/token", func(w http.ResponseWriter, r *http.Request) {

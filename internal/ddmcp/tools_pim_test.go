@@ -112,6 +112,7 @@ func TestCreateEventAlarmReachesServer(t *testing.T) {
 // The extended fields must reach the server, with the times normalized to UTC:
 // a time carrying a numeric offset is stored by the server as a floating local time.
 func TestCreateEventExtendedFields(t *testing.T) {
+	t.Setenv("TZ", "Europe/Berlin") // recurring events need an IANA zone; Windows exposes none
 	gotBody := make(chan map[string]any, 1)
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /auth/device/token", func(w http.ResponseWriter, r *http.Request) {

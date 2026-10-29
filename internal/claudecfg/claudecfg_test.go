@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -136,7 +137,7 @@ func TestWriteEntryAtomicThroughSymlink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != 0o640 {
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o640 {
 		t.Fatalf("mode = %v, want 0640", fi.Mode().Perm())
 	}
 	b, _ := os.ReadFile(target)
@@ -163,7 +164,7 @@ func TestWriteEntryNewFileIsPrivate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("mode = %v, want 0600", fi.Mode().Perm())
 	}
 }
@@ -171,6 +172,9 @@ func TestWriteEntryNewFileIsPrivate(t *testing.T) {
 // A binary reached through a PATH symlink is registered by its PATH entry, not by
 // the versioned directory the symlink points into.
 func TestStablePathPrefersPathSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("package-manager PATH symlinks are a macOS/Linux concern")
+	}
 	dir := t.TempDir()
 	cellar := filepath.Join(dir, "Cellar", "1.2.3", "bin")
 	bin := filepath.Join(dir, "bin")

@@ -3,16 +3,18 @@ package ddclient
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 func TestConfigPathHonorsXDG(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg-test")
+	base := filepath.Join(t.TempDir(), "xdg-test")
+	t.Setenv("XDG_CONFIG_HOME", base)
 	got, err := ConfigPath()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "/tmp/xdg-test/discodrive/cli.json"; got != want {
+	if want := filepath.Join(base, "discodrive", "cli.json"); got != want {
 		t.Fatalf("ConfigPath = %q, want %q", got, want)
 	}
 }
@@ -29,7 +31,7 @@ func TestConfigRoundTripAndPerms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("perm = %v, want 0600", fi.Mode().Perm())
 	}
 	got, err := Load(path)
@@ -83,7 +85,7 @@ func TestConfigSaveTightensExistingPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0600 {
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0600 {
 		t.Fatalf("mode=%o want=600", info.Mode().Perm())
 	}
 	got, err := Load(path)

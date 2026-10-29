@@ -109,6 +109,7 @@ func TestCalAddAlarmInvalid(t *testing.T) {
 
 // The extended fields must reach the POST body, with the times in UTC.
 func TestCalAddExtendedFields(t *testing.T) {
+	t.Setenv("TZ", "Europe/Berlin") // recurring events need an IANA zone; Windows exposes none
 	mux := calCLIMux(t)
 	gotBody := make(chan map[string]any, 1)
 	mux.HandleFunc("POST /me/calendar/events", func(w http.ResponseWriter, r *http.Request) {
