@@ -1,0 +1,810 @@
+{
+  "core": {
+    "yes": "da",
+    "no": "ne",
+    "hello": "Zdravo, {Name}"
+  },
+  "err": {
+    "server_status": "server je vratio {Status}: {Message}",
+    "auth_failed": "autorizacija nije uspela",
+    "upload_hash_mismatch": "server je sačuvao drugačije bajtove od poslatih (sha256 {Got}, očekivan {Want}): ponovo otpremite datoteku",
+    "pair_incomplete": "uparivanje nije završeno: {Status}",
+    "session_token_invalid": "nevažeći token sesije",
+    "session_token_parse": "nije moguće parsirati token sesije",
+    "session_token_no_device": "token sesije nema device_id — opoziv uređaja nije dostupan na ovom serveru",
+    "alarm_invalid": "neispravna vrednost alarm: {Value} (minuti pre početka, ceo broj ≥ 0)",
+    "music": {
+      "not_configured": "muzika nije podešena: dodelite muzičku fasciklu u DiscoDrive-u",
+      "not_folder": "\"{Name}\" nije fascikla",
+      "no_folder": "nema fascikle \"{Name}\" u muzičkoj biblioteci"
+    },
+    "files": {
+      "not_dir": "nije direktorijum: {Path}",
+      "no_path": "ne postoji putanja: {Path}"
+    },
+    "claude": {
+      "config_parse": "Claude konfiguracija {Path} ne može da se parsira"
+    },
+    "bookmarks": {
+      "move_cycle": "fascikla se ne može premestiti u samu sebe niti u neku od svojih podfascikli",
+      "bad_parent": "roditelj mora biti jedna od tvojih postojećih fascikli sa obeleživačima",
+      "folder_not_found": "fascikla sa obeleživačima nije pronađena: {Ref}",
+      "folder_ambiguous": "više fascikli sa obeleživačima odgovara {Ref} — koristi id umesto toga"
+    },
+    "saved": {
+      "not_retryable": "stavka se još uvek obrađuje — pokušaj ponovo kada bude završena ili neuspešna",
+      "no_content": "nema sačuvanog teksta za ovu stavku (nije članak ili još nije završena)"
+    },
+    "freq_invalid": "nedozvoljena vrednost ponavljanja: {Value} (dozvoljeno: {Allowed})",
+    "time_invalid": "nedozvoljeno vreme: {Value} (očekuje se RFC3339, npr. 2026-07-02T10:00:00Z, ili „2026-07-02 10:00“)",
+    "until_without_freq": "„until“ ima smisla samo uz pravilo ponavljanja",
+    "event_ambiguous": "događaj {UID} postoji u više kalendara ({Calendars}) — navedi kalendar (--calendar / calendar_id)",
+    "file_read_too_large": "Датотека премашује ограничење текста од 1 MiB. Преузмите је командом dd-cli get.",
+    "timezone_required": "Наведите IANA временску зону преко --tz (на пример Europe/Berlin).",
+    "timezone_invalid": "Неисправна IANA временска зона: {Value}"
+  },
+  "pair": {
+    "open_link": "Otvorite vezu i potvrdite uređaj:",
+    "enter_code": "Ili, na uređaju koji je već prijavljen na DiscoDrive, unesite kod ručno: {Code}",
+    "waiting": "Čekanje na potvrdu…"
+  },
+  "ui": {
+    "usage_label": "Upotreba:",
+    "commands_label": "Komande:",
+    "global_flags_label": "Globalne oznake:",
+    "examples_label": "Primeri:",
+    "irreversible": "⚠️  Nepovratna operacija.",
+    "root": {
+      "tagline": "dd-cli — terminalski klijent za DiscoDrive.",
+      "usage_line": "  dd-cli [globalne oznake] <komanda> [argumenti]",
+      "more": "`dd-cli <komanda> --help` — detalji o komandi."
+    },
+    "flag": {
+      "json": "  --json            mašinski čitljiv izlaz (podrazumevano: čitljiv za ljude)",
+      "profile": "  --profile <name>  koristi profil koji nije podrazumevani",
+      "server": "  --server <url>    koristi sačuvanu prijavu za ovu adresu servera",
+      "lang": "  --lang <code>     jezik interfejsa (en/de/es/fr/ru/sr/uk)",
+      "version": "  --version         prikaži verziju i izađi"
+    },
+    "unknown_command": "nepoznata komanda: {Name}",
+    "error": "greška: {Msg}",
+    "no_profile": "nema sačuvanog profila; prvo pokrenite `dd-cli login`",
+    "server_mismatch": "profil \"{Profile}\" je uparen sa {Have}, a ne sa {Server}; pokrenite `dd-cli login --server {Server}` da biste se uparili sa tom adresom",
+    "no_server_profile": "nema sačuvane prijave za {Server}; prvo pokrenite `dd-cli login --server {Server}`",
+    "cleartext_server": "upozorenje: {Server} koristi običan http — token uređaja i svi podaci se prenose nešifrovano; koristite https osim ako je server u pouzdanoj mreži"
+  },
+  "cmd": {
+    "books": {
+      "summary": "books: biblioteka, pretraga, preuzimanje, metapodaci",
+      "usage": "dd-cli books [list] [--q <s>] [--author <s>] [--series <s>] [--genre <s>] [--start <n>] | facets | get <bookID> [--out <path>] | meta <nodeID> | scan | info",
+      "long": "DiscoDrive domen knjiga (e-knjige).\n  list (podrazumevano)  — biblioteka; filteri se međusobno isključuju (q|author|series|genre), straničenje preko --start\n  facets                — dostupne vrednosti filtera (autori/serijali/žanrovi)\n  get <bookID> [--out]  — preuzimanje datoteke knjige (bookID — polje id iz liste)\n  meta <nodeID>         — prikaz metapodataka knjige (nodeID — polje nodeId iz liste)\n  scan                  — pokreće skeniranje fascikle sa knjigama (u pozadini)\n  info                  — prikaz podešavanja knjiga\nNapomena: knjiga u listi ima DVA identifikatora — id (za get) i nodeId (za meta).\nSa --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli books list --q golang",
+        "1": "dd-cli books list --author \"Donald Knuth\" --start 50",
+        "2": "dd-cli books get b1 --out ./book.epub",
+        "3": "dd-cli books meta n1"
+      },
+      "msg": {
+        "need_node_id": "potreban je nodeID: dd-cli books meta <nodeID>",
+        "unknown_verb": "nepoznata podkomanda za books: {Verb}",
+        "shown": "Prikazano: {Count} (ukupno={Total}; ukupan broj nije pouzdan pri filtriranju)\n",
+        "facets": "Autori: {Authors}\nSerijali: {Series}\nŽanrovi: {Genres}\n",
+        "need_book_id": "potreban je bookID: dd-cli books get <bookID> [--out <path>]",
+        "saved": "Knjiga sačuvana: {Path}\n",
+        "meta": "Naslov: {Title}\nAutori: {Authors}\nSerijal: {Series} (#{SeriesIndex})\nJezik: {Language}\nIzdavač: {Publisher}\nDatum: {Date}\nOpis: {Description}\n",
+        "scan_started": "Skeniranje pokrenuto (radi u pozadini).",
+        "scan_not_configured": "Fascikla sa knjigama nije podešena — nema šta da se skenira.",
+        "info": "Knjige omogućene: {Enabled}\nFascikla: {Folder}\nLozinka podešena: {HasPassword}\nAPI ključ podešen: {HasApiKey}\n"
+      },
+      "flag": {
+        "q": "pretraga celog teksta",
+        "author": "filter po autoru",
+        "series": "filter po serijalu",
+        "genre": "filter po žanru",
+        "start": "pomak straničenja (stranica = 50 knjiga)",
+        "out": "putanja za čuvanje (podrazumevano: <bookID>.bin)"
+      }
+    },
+    "cal": {
+      "summary": "kalendar: događaji, dodavanje, izmena, kalendari",
+      "usage": "dd-cli cal events [--from <t>] [--to <t>] | add --summary <s> --start <t> [flags] | show <uid> | set <uid> [flags] | rm <uid> | calendars",
+      "long": "Operacije sa kalendarom (vreme — RFC3339, npr. 2026-07-02T10:00:00Z; vrednost bez zone čita se kao lokalno vreme).\n  events [--from <t>] [--to <t>]   — događaji u vremenskom opsegu (podrazumevano: danas…+7 dana)\n  add --summary <s> --start <t> [--end <t>] [--location <l>] [--description <d>] [--all-day] [--repeat <daily|weekly|monthly|yearly>] [--until <t>] [--alarm <min>] [--calendar <id>] [--tz <IANA>]  — kreiranje događaja\n  show <uid> [--calendar <id>]     — svi podaci o događaju\n  set <uid> [flegovi iz add]       — menja samo navedena polja (prazna vrednost briše polje)\n  rm <uid> [--calendar <id>]       — brisanje događaja (⚠️ Nepovratno)\n  calendars                        — lista kalendara\nUz --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli cal events",
+        "1": "dd-cli cal events --from 2026-07-01T00:00:00Z --to 2026-07-08T00:00:00Z",
+        "2": "dd-cli cal add --summary \"Call\" --start 2026-07-03T09:00:00Z --end 2026-07-03T09:30:00Z",
+        "3": "dd-cli cal rm e1",
+        "4": "dd-cli cal add --summary \"Odmor\" --start 2026-08-01 --end 2026-08-15 --all-day",
+        "5": "dd-cli cal set e1 --alarm 15 --location \"Zoom\""
+      },
+      "msg": {
+        "unknown_verb": "nepoznata podkomanda za cal: {Verb}",
+        "need_summary_start": "--summary i --start su obavezni",
+        "created": "Događaj kreiran: {UID}\n",
+        "need_uid": "potreban je uid: dd-cli cal rm <uid>",
+        "deleted": "Događaj obrisan: {UID}\n",
+        "default_mark": " (podrazumevano)",
+        "need_uid_show": "potreban je uid: dd-cli cal show <uid>",
+        "need_uid_set": "potreban je uid: dd-cli cal set <uid> [flegovi]",
+        "set_no_flags": "nema šta da se menja: navedite bar jedan fleg polja",
+        "updated": "Događaj izmenjen: {UID}\n"
+      },
+      "flag": {
+        "from": "početak prozora RFC3339 (podrazumevano: sada)",
+        "to": "kraj prozora RFC3339 (podrazumevano: +7 dana)",
+        "summary": "naslov događaja (obavezno)",
+        "start": "početak RFC3339 (obavezno)",
+        "end": "kraj RFC3339 (podrazumevano: +1 sat na serveru)",
+        "location": "lokacija",
+        "alarm": "podsetnik N minuta pre početka (0, 5, 15, 30, 60, 1440)",
+        "calendar": "id kalendara (podrazumevano: podrazumevani kalendar)",
+        "rm_calendar": "id kalendara",
+        "description": "opis / beleške",
+        "all_day": "celodnevni događaj (koristi se samo datum iz start/end)",
+        "repeat": "ponavljanje: daily, weekly, monthly, yearly",
+        "until": "ponavljati do (zahteva --repeat)",
+        "summary_set": "naslov događaja",
+        "start_set": "početak (RFC3339 ili „2026-07-02 10:00“)",
+        "end_set": "kraj",
+        "alarm_set": "podsetnik N minuta pre početka; „“ ga uklanja, „keep“ ostavlja postojeće podsetnike netaknutim",
+        "tz": "IANA временска зона (на пример Europe/Berlin; подразумевано: системска)"
+      },
+      "field": {
+        "summary": "Naslov:",
+        "start": "Početak:",
+        "end": "Kraj:",
+        "all_day": "Ceo dan:",
+        "location": "Lokacija:",
+        "description": "Opis:",
+        "repeat": "Ponavljanje:",
+        "until": "Do:",
+        "alarm": "Podsetnik:",
+        "calendar": "Kalendar:",
+        "uid": "UID:",
+        "tz": "Временска зона:"
+      }
+    },
+    "contacts": {
+      "summary": "contacts: lista, prikaz, dodavanje, brisanje",
+      "usage": "dd-cli contacts [list] | show <uid> | add --name <name> [flags] | rm <uid>",
+      "long": "Upravljanje kontaktima.\n  list (podrazumevano)  — lista kontakata\n  show <uid>             — detalji kontakta\n  add --name <name> [--email <e>] [--phone <p>] [--org <o>]  — kreiranje\n  rm <uid>              — brisanje (⚠️ Nepovratno)\nSa --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli contacts",
+        "1": "dd-cli contacts show c1",
+        "2": "dd-cli contacts add --name \"Bob\" --email bob@x.io",
+        "3": "dd-cli contacts rm c1"
+      },
+      "msg": {
+        "need_uid_show": "potreban je uid: dd-cli contacts show <uid>",
+        "unknown_verb": "nepoznata podkomanda za contacts: {Verb}",
+        "need_uid_rm": "potreban je uid: dd-cli contacts rm <uid>",
+        "org_line": "  organizacija: {Org}\n",
+        "email_line": "  e-pošta ({Type}): {Value}\n",
+        "phone_line": "  telefon ({Type}): {Value}\n",
+        "need_name": "--name je obavezno",
+        "created": "Kontakt kreiran: {UID}\n",
+        "deleted": "Kontakt obrisan: {UID}\n"
+      },
+      "flag": {
+        "name": "puno ime (obavezno)",
+        "phone": "telefon",
+        "org": "organizacija"
+      }
+    },
+    "tasks": {
+      "summary": "tasks: lista, dodavanje, označavanje, brisanje",
+      "usage": "dd-cli tasks [list] | add --summary <s> [flags] | done <uid> | undone <uid> | rm <uid>",
+      "long": "Upravljanje zadacima.\n  list (podrazumevano)  — lista zadataka (prvo nezavršeni)\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>]  — kreiranje\n  done <uid>             — označi kao završeno\n  undone <uid>           — poništi oznaku\n  rm <uid>              — brisanje (⚠️ Nepovratno)\nSa --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli tasks",
+        "1": "dd-cli tasks add --summary \"Call the doctor\" --due 2026-07-05T09:00:00Z --priority 1",
+        "2": "dd-cli tasks done t1",
+        "3": "dd-cli tasks rm t1"
+      },
+      "msg": {
+        "need_uid_rm": "potreban je uid: dd-cli tasks rm <uid>",
+        "unknown_verb": "nepoznata podkomanda za tasks: {Verb}",
+        "due_suffix": " rok {Due}",
+        "need_summary": "--summary je obavezno",
+        "created": "Zadatak kreiran: {UID}\n",
+        "need_uid": "uid je obavezan",
+        "marked_done": "Označeno kao završeno: {UID}\n",
+        "unmarked": "Oznaka poništena: {UID}\n",
+        "deleted": "Zadatak obrisan: {UID}\n"
+      },
+      "flag": {
+        "summary": "naslov zadatka (obavezno)",
+        "due": "rok RFC3339",
+        "priority": "prioritet 1..9 (1 = najviši; 0 = bez prioriteta)"
+      }
+    },
+    "music": {
+      "summary": "music: radio, podkasti, skeniranje",
+      "usage": "dd-cli music [radio] | list [subpath] | radio-add --name <n> --stream <url> [--home <url>] | radio-rm <id> | podcasts | podcast-add <feedURL> | podcast-rm <id> | scan | info",
+      "long": "DiscoDrive domen muzike.\n  radio (podrazumevano)          — lista radio stanica\n  list [subpath]                 — sadržaj muzičke fascikle (izvođači/albumi/numere kao datoteke);\n                                  subpath ulazi dublje, npr. list \"Bi-2/Lunapark\"\n  radio-add --name --stream [--home]  — dodavanje stanice\n  radio-rm <id>                 — brisanje stanice (⚠️ Nepovratno)\n  podcasts                      — lista pretplata na podkaste\n  podcast-add <feedURL>         — pretplata na podkast preko URL-a fida\n  podcast-rm <id>               — otkazivanje pretplate (⚠️ Nepovratno)\n  scan                          — pokreće skeniranje muzičke fascikle (u pozadini)\n  info                          — prikaz podešavanja muzike\nNapomena: puna biblioteka (pretraga/striming) je preko Subsonic-a; ovo je obična lista datoteka.\nSa --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli music list",
+        "1": "dd-cli music list \"Cosmic Gate\"",
+        "2": "dd-cli music radio-add --name \"Jazz FM\" --stream https://stream.example/jazz",
+        "3": "dd-cli music scan"
+      },
+      "msg": {
+        "need_id_radio_rm": "potreban je id: dd-cli music radio-rm <id>",
+        "need_feed_url": "potreban je URL fida: dd-cli music podcast-add <feedURL>",
+        "need_id_podcast_rm": "potreban je id: dd-cli music podcast-rm <id>",
+        "unknown_verb": "nepoznata podkomanda za music: {Verb}",
+        "need_name_stream": "--name i --stream su obavezni",
+        "station_added": "Stanica dodata: {Name} ({ID})\n",
+        "station_removed": "Stanica uklonjena: {ID}\n",
+        "podcast_added": "Pretplaćeno: {Title} ({ID})\n",
+        "podcast_removed": "Pretplata otkazana: {ID}\n",
+        "scan_started": "Skeniranje pokrenuto (radi u pozadini).",
+        "scan_not_configured": "Muzička fascikla nije podešena — nema šta da se skenira.",
+        "info": "Muzika omogućena: {Enabled}\nFascikla: {Folder}\nLozinka podešena: {HasPassword}\n"
+      },
+      "flag": {
+        "name": "naziv stanice (obavezno)",
+        "stream": "URL striminga (obavezno)",
+        "home": "veb-sajt (opciono)"
+      }
+    },
+    "ls": {
+      "summary": "prikaz sadržaja fascikle",
+      "usage": "dd-cli ls [path]",
+      "long": "Ispisuje sadržaj fascikle po putanji (podrazumevano: koren). Direktorijumi su označeni sa \"/\", za datoteke se prikazuje veličina.\nSa --json — niz {id,name,is_dir,size,version}.",
+      "example": {
+        "0": "dd-cli ls",
+        "1": "dd-cli ls docs",
+        "2": "dd-cli --json ls docs"
+      }
+    },
+    "get": {
+      "summary": "preuzimanje datoteke",
+      "usage": "dd-cli get <path> [dest]",
+      "long": "Preuzima datoteku po putanji. dest — lokalna putanja (podrazumevano: naziv datoteke u trenutnom direktorijumu; \"-\" — stdout).",
+      "example": {
+        "0": "dd-cli get docs/a.txt",
+        "1": "dd-cli get docs/a.txt /tmp/a.txt",
+        "2": "dd-cli get docs/a.txt -"
+      },
+      "msg": {
+        "need_path": "potrebna je putanja: dd-cli get <path> [dest]",
+        "is_dir": "{Path} je fascikla, a ne datoteka",
+        "saved": "Sačuvano: {Path}\n"
+      }
+    },
+    "put": {
+      "summary": "otpremanje datoteke",
+      "usage": "dd-cli put <local> <path>",
+      "long": "Otprema lokalnu datoteku u odredišnu fasciklu. <path> — odredišna putanja (fascikla/naziv). Odredišna fascikla mora postojati.",
+      "example": {
+        "0": "dd-cli put ./report.pdf docs/report.pdf"
+      },
+      "msg": {
+        "need_two_args": "potrebna su dva argumenta: dd-cli put <local> <path>",
+        "not_folder": "{Path} nije fascikla",
+        "uploaded": "Otpremljeno: {Path}\n"
+      }
+    },
+    "mkdir": {
+      "summary": "kreiranje fascikle",
+      "usage": "dd-cli mkdir <path>",
+      "long": "Kreira fasciklu na datoj putanji. Nadređena fascikla mora postojati.",
+      "example": {
+        "0": "dd-cli mkdir docs/2026"
+      },
+      "msg": {
+        "need_path": "potrebna je putanja: dd-cli mkdir <path>",
+        "empty_name": "prazan naziv fascikle",
+        "not_folder": "{Path} nije fascikla",
+        "created": "Fascikla kreirana: {Path}\n"
+      }
+    },
+    "mv": {
+      "summary": "premeštanje/preimenovanje čvora",
+      "usage": "dd-cli mv <src> <dst>",
+      "long": "Premešta ili preimenuje datoteku/fasciklu. Ako je dst postojeća fascikla, src se premešta unutar nje.",
+      "example": {
+        "0": "dd-cli mv docs/a.txt docs/2026/a.txt",
+        "1": "dd-cli mv old.txt new.txt"
+      },
+      "msg": {
+        "need_two_args": "potrebna su dva argumenta: dd-cli mv <src> <dst>",
+        "cannot_move_root": "koren se ne može premestiti",
+        "moved_into_folder": "Premešteno: {Src} → {Dst}/\n",
+        "moved": "Premešteno: {Src} → {Dst}\n"
+      }
+    },
+    "rm": {
+      "summary": "brisanje čvora",
+      "usage": "dd-cli rm <path>",
+      "long": "Meko briše datoteku ili fasciklu (zajedno sa sadržajem). Vraćanje je moguće preko DiscoDrive korpe.",
+      "example": {
+        "0": "dd-cli rm docs/old.txt"
+      },
+      "msg": {
+        "need_path": "potrebna je putanja: dd-cli rm <path>",
+        "cannot_delete_root": "koren se ne može obrisati",
+        "deleted": "Obrisano: {Path}\n"
+      }
+    },
+    "share": {
+      "summary": "kreiranje veze/pristupa čvoru",
+      "usage": "dd-cli share <path> [--email <addr>] [--access view|edit] [--expires <dur>]",
+      "long": "Kreira javnu vezu (podrazumevano) ili dodeljuje pristup korisniku putem e-pošte.\n--expires prihvata Go trajanje (npr. 24h). Sa --json ispisuje {share_id,token,access}.",
+      "example": {
+        "0": "dd-cli share docs/a.txt",
+        "1": "dd-cli share docs/a.txt --expires 24h",
+        "2": "dd-cli share docs/a.txt --email bob@example.com --access edit"
+      },
+      "flag": {
+        "email": "dodeljuje pristup korisniku putem e-pošte (u suprotnom — javna veza)",
+        "access": "nivo pristupa: view|edit",
+        "expires": "trajanje važenja (npr. 24h); 0 — neograničeno"
+      },
+      "msg": {
+        "need_path": "potrebna je putanja: dd-cli share <path> [flags]",
+        "link": "Veza: {URL} (pristup: {Access})\n",
+        "granted": "Pristup dodeljen (share_id: {ShareID}, pristup: {Access})\n"
+      }
+    },
+    "login": {
+      "summary": "prijava na DiscoDrive (uparivanje pomoću device-code)",
+      "usage": "dd-cli login --server <url> [--name <device name>] [--no-claude] [--insecure]",
+      "long": "Pokreće uparivanje pomoću device-code: ispisuje vezu za potvrdu i kratak kod,\nzatim čeka potvrdu na bilo kom uređaju na kome ste prijavljeni na DiscoDrive.\nLozinka/TOTP se nikada ne unosi u terminal (radi i za naloge sa passkey-jem i na headless mašinama).\nPosle prijave, nudi registraciju dd-mcp MCP servera u Claude konfiguraciji (--no-claude ovo isključuje).",
+      "example": {
+        "0": "dd-cli login --server https://drive.example",
+        "1": "dd-cli login --server https://drive.example --name laptop --no-claude"
+      },
+      "flag": {
+        "server": "adresa DiscoDrive servera (obavezno)",
+        "name": "naziv uređaja",
+        "profile": "naziv profila za čuvanje",
+        "no_claude": "ne registruj dd-mcp u Claude konfiguraciji",
+        "allow_changes": "dozvoli alate za izmene u Claude konfiguraciji",
+        "insecure": "прескочи проверу TLS сертификата (самопотписани сервер); чува се у профилу"
+      },
+      "msg": {
+        "need_server": "--server <url> je obavezno",
+        "done": "Gotovo. Profil \"{Profile}\" sačuvan.\n",
+        "claude_setup_failed": "upozorenje: registracija dd-mcp u Claude nije uspela",
+        "mode_readonly": "samo za čitanje",
+        "mode_changes_allowed": "izmene dozvoljene",
+        "connected": "Povezano sa Claude ({Mode}): {Changed}\n"
+      }
+    },
+    "logout": {
+      "summary": "odjava: opoziva uređaj na serveru i zaboravlja profil",
+      "usage": "dd-cli logout [--profile <name>] [--local-only]",
+      "long": "Prekida uparivanje: opoziva trenutni uređaj na serveru (device-token postaje\nnevažeći) i uklanja profil iz lokalnog cli.json.\n  --local-only — ne kontaktira server, samo zaboravlja lokalni profil\n                 (npr. ako je token već opozvan u veb interfejsu).",
+      "example": {
+        "0": "dd-cli logout",
+        "1": "dd-cli logout --profile work",
+        "2": "dd-cli logout --local-only"
+      },
+      "flag": {
+        "local_only": "ne opozivaj uređaj na serveru, samo zaboravi profil"
+      },
+      "msg": {
+        "no_profile": "ne postoji profil \"{Name}\"",
+        "revoke_failed": "upozorenje: opoziv uređaja na serveru nije uspeo",
+        "revoke_manual_hint": "opozovite ga ručno u DiscoDrive veb interfejsu (odeljak \"Uređaji\").",
+        "revoked": "Uređaj opozvan na serveru.",
+        "forgotten": "Profil \"{Name}\" zaboravljen.\n"
+      }
+    },
+    "whoami": {
+      "summary": "prikaz trenutnog korisnika",
+      "usage": "dd-cli whoami",
+      "long": "Ispisuje e-poštu, ulogu i id trenutnog korisnika (GET /me). Sa --json — objekat {id,email,role,tenant_id}.",
+      "example": {
+        "0": "dd-cli whoami",
+        "1": "dd-cli --json whoami"
+      },
+      "msg": {
+        "line": "{Email} (uloga: {Role}, id: {ID})\n"
+      }
+    },
+    "setup_claude": {
+      "summary": "registracija dd-mcp u Claude konfiguraciji(ama); promena režima izmena",
+      "usage": "dd-cli setup-claude [--allow-changes]",
+      "long": "Pronalazi dd-mcp i dodaje ga kao MCP server u postojeće Claude Desktop/Code konfiguracije.\n  --allow-changes — dozvoli alate za izmene (brisanje/premeštanje itd.)\n  bez oznake       — režim samo za čitanje (alati za izmene onemogućeni)\nPonovno pokretanje sa/bez oznake menja režim. Restartujte Claude posle promene.",
+      "example": {
+        "0": "dd-cli setup-claude --allow-changes   # dozvoli izmene",
+        "1": "dd-cli setup-claude                    # vrati na samo za čitanje"
+      },
+      "flag": {
+        "allow_changes": "dozvoli alate za izmene"
+      },
+      "msg": {
+        "none_found": "Nije pronađena nijedna Claude konfiguracija.",
+        "mode_readonly": "samo za čitanje",
+        "mode_changes": "izmene dozvoljene (--allow-changes)",
+        "updated": "Ažurirano: {Path}\n",
+        "mode_line": "Režim: {Mode}. Restartujte Claude da bi se primenilo.\n"
+      }
+    },
+    "print_config": {
+      "summary": "ispis isečka za registraciju dd-mcp za bilo koji MCP klijent",
+      "usage": "dd-cli print-config [--allow-changes] [--http <addr>]",
+      "long": "Ispisuje isečak za registraciju dd-mcp spreman za nalepiti — ne menja ništa na disku.\nZa razliku od setup-claude (koji menja Claude konfiguracije), ovo radi za bilo koji MCP klijent\n(Cursor, Zed, Cline, ChatGPT konektore itd.).\n  bez oznaka       — stdio varijanta (JSON mcpServers) za lokalne klijente\n  --http <addr>    — varijanta za HTTP klijente: komanda za pokretanje + URL\n  --allow-changes  — uključi alate za izmene u ispisani isečak",
+      "example": {
+        "0": "dd-cli print-config                          # stdio isečak (samo za čitanje)",
+        "1": "dd-cli print-config --allow-changes          # stdio sa alatima za izmene",
+        "2": "dd-cli print-config --http 127.0.0.1:8080    # varijanta za ChatGPT/udaljene klijente"
+      },
+      "flag": {
+        "allow_changes": "uključi alate za izmene u izlaz",
+        "http": "ispiši varijantu za HTTP klijente (npr. 127.0.0.1:8080)"
+      },
+      "msg": {
+        "http_header": "HTTP transport — za klijente koji rade preko URL-a (ChatGPT konektori, udaljeni pristup):\n\n",
+        "http_step1": "  1) pokrenite server:  {Cmd}\n",
+        "http_step2": "  2) URL klijenta:      http://{Addr}\n\n",
+        "http_creds": "Akreditivi dolaze iz profila (dd-cli login) ili DISCODRIVE_SERVER/DISCODRIVE_TOKEN promenljivih\nokruženja na strani servera — klijentu je potreban samo URL. MCP sloj nema autentifikaciju:\ndržite port lokalnim ili ograničite pristup na nivou mreže/proksija.\n",
+        "stdio_header": "Nalepite u konfiguraciju vašeg MCP klijenta (Claude Desktop/Code, Cursor, Zed itd.):\n\n{Snippet}\n\n",
+        "stdio_creds1": "Akreditivi — iz profila (dd-cli login), ili ih dodajte u env unos:\n",
+        "stdio_footer": "Za HTTP klijente (npr. ChatGPT): dd-cli print-config --http 127.0.0.1:8080\n"
+      }
+    },
+    "rename": {
+      "summary": "preimenuj datoteku/folder na mestu",
+      "usage": "dd-cli rename <path> <new-name>",
+      "long": "Preimenuje datoteku ili folder na mestu (ostaje u istom folderu). <new-name> je čisto ime, ne putanja — za premeštanje između foldera koristite `mv`.",
+      "example": {
+        "0": "dd-cli rename docs/old.txt new.txt",
+        "1": "dd-cli rename docs/2025 2026"
+      },
+      "msg": {
+        "need_args": "potrebna su dva argumenta: dd-cli rename <path> <new-name>",
+        "cannot_rename_root": "ne može se preimenovati koren",
+        "name_has_slash": "<new-name> mora biti ime, ne putanja (za premeštanje koristite `mv`): {Name}",
+        "renamed": "Preimenovano: {Path} → {Name}\n"
+      }
+    },
+    "bookmarks": {
+      "summary": "obeleživači pregledača: stablo, dodavanje, izmena, brisanje",
+      "usage": "dd-cli bookmarks [tree] | list [flags] | add <url> [flags] | mkdir <title> [flags] | edit <id> [flags] | rm <id>",
+      "long": "Obeleživači pregledača sinhronizovani iz proširenja.\n  tree (podrazumevano)  — celo stablo, id u prvoj koloni\n  list [--q <s>] [--folder <f>] [--folders]  — ravna lista sa putanjama fascikli\n  add <url> [--title <s>] [--parent <f>] [--position <n>]  — novi obeleživač\n  mkdir <title> [--parent <f>]  — nova fascikla\n  edit <id> [--title <s>] [--url <u>] [--parent <f>] [--position <n>]  — preimenovanje ili premeštanje\n  rm <id>               — brisanje, fascikla zajedno sa sadržajem (⚠️ Nepovratno)\nFascikla <f> je id ili putanja poput \"Toolbar/Dev\".\nŠalju se samo oznake koje otkucaš, pa je --parent \"\" namerno premeštanje na najviši nivo.\nSa --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli bookmarks",
+        "1": "dd-cli bookmarks list --q go.dev",
+        "2": "dd-cli bookmarks mkdir Dev --parent \"Bookmarks Toolbar\"",
+        "3": "dd-cli bookmarks add https://go.dev --title Go --parent \"Bookmarks Toolbar/Dev\"",
+        "4": "dd-cli bookmarks edit b7f8g9 --title \"Sajt Go\""
+      },
+      "flag": {
+        "q": "deo naslova, url-a ili putanje fascikle",
+        "folder": "ograniči na ovu fasciklu i sve ispod nje: id ili putanja poput \"Toolbar/Dev\"",
+        "folders": "samo fascikle",
+        "title": "naslov",
+        "url": "novi URL",
+        "parent": "roditeljska fascikla: id ili putanja poput \"Toolbar/Dev\"; prazno = najviši nivo",
+        "parent_move": "premesti u ovu fasciklu: id ili putanja poput \"Toolbar/Dev\"; prosledi praznu vrednost za premeštanje na najviši nivo",
+        "position": "položaj među susedima (podrazumevano: iza poslednjeg)"
+      },
+      "msg": {
+        "need_id": "id je obavezan",
+        "need_url": "potreban je url: dd-cli bookmarks add <url>",
+        "need_title": "potreban je naslov: dd-cli bookmarks mkdir <title>",
+        "nothing_to_change": "nema šta da se promeni: prosledi bar jednu od --title, --url, --parent, --position",
+        "unknown_verb": "nepoznata podkomanda za bookmarks: {Verb}",
+        "added": "Obeleživač dodat: {ID} {Title}\n",
+        "folder_created": "Fascikla kreirana: {ID} {Title}\n",
+        "updated": "Obeleživač izmenjen: {ID} {Title}\n",
+        "deleted": "Obeleživač obrisan: {ID}\n"
+      }
+    },
+    "pocket": {
+      "summary": "članci za kasnije čitanje: lista, dodavanje, čitanje, brisanje",
+      "usage": "dd-cli pocket [list] [flags] | add <url> [--title <s>] | read <id> [--out <file>] | retry <id> | rm <id>",
+      "long": "Članci za kasnije čitanje. Server preuzima i konvertuje stranicu u pozadini,\npa nova stavka počinje kao pending.\n  list (podrazumevano)  — najnovije prvo; --status <s> --q <s> --limit <n> --offset <n>\n  add <url> [--title <s>]  — čuvanje stranice\n  read <id> [--out <file>]  — markdown, na stdout ili u datoteku\n  retry <id>            — ponovno preuzimanje (za status error)\n  rm <id>               — brisanje; već upisana markdown datoteka ostaje (⚠️ Nepovratno)\nServerska preuzimanja se ovde nikada ne prikazuju — vidi dd-cli download.\nSa --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli pocket list --status error",
+        "1": "dd-cli pocket add https://example.org/article",
+        "2": "dd-cli pocket read s1 --out article.md",
+        "3": "dd-cli pocket rm s1"
+      },
+      "flag": {
+        "status": "filtriranje po statusu: pending, processing, done ili error",
+        "q": "deo naslova ili url-a",
+        "limit": "veličina stranice, 1..500 (podrazumevano 50)",
+        "offset": "pomeraj za paginaciju",
+        "title": "zamenski naslov; zanemaruje se ako je ovaj url već sačuvan",
+        "out": "upiši markdown u ovu datoteku umesto na stdout"
+      },
+      "msg": {
+        "need_id": "id je obavezan",
+        "need_url": "potreban je url: dd-cli pocket add <url>",
+        "unknown_verb": "nepoznata podkomanda za pocket: {Verb}",
+        "saved": "Sačuvano: {ID} ({Status})\n",
+        "written": "Upisano: {Path}\n",
+        "retrying": "Ponovno preuzimanje: {ID}\n",
+        "deleted": "Sačuvani članak obrisan: {ID}\n"
+      }
+    },
+    "download": {
+      "summary": "serverska preuzimanja: red čekanja, napredak, otkazivanje",
+      "usage": "dd-cli download [list] | add <url> [--title <s>] [--cookie <s>] | status <id> | rm <id>",
+      "long": "Preuzimanja koja server obavlja u tvoju Downloads fasciklu.\n  add <url> [--title <s>] [--cookie <s>]  — stavlja u red; prenos se odvija na serveru\n  status <id>           — napredak jednog preuzimanja\n  list (podrazumevano)  — preuzimanja koja je ova mašina stavila u red\n  rm <id>               — zaustavlja ga i zaboravlja stavku iz reda; već upisani\n                          bajtovi ostaju kao datoteka (⚠️ Nepovratno)\nServer ne čuva listu preuzimanja i zaboravlja završena, pa list čita lokalni\ndnevnik u downloads.json pored cli.json; id-jevi stavljeni u red drugde nisu u njemu.\nSa --json izlaz je mašinski čitljiv.",
+      "example": {
+        "0": "dd-cli download add https://example.org/ubuntu.iso",
+        "1": "dd-cli download status d1",
+        "2": "dd-cli download rm d1"
+      },
+      "flag": {
+        "title": "oznaka za stavku u redu čekanja",
+        "cookie": "Cookie zaglavlje za sajt iza prijave"
+      },
+      "msg": {
+        "need_id": "id je obavezan",
+        "need_url": "potreban je url: dd-cli download add <url>",
+        "unknown_verb": "nepoznata podkomanda za download: {Verb}",
+        "queued": "U redu čekanja: {ID} ({Status})\n",
+        "cancelled": "Preuzimanje otkazano: {ID}\n",
+        "journal_empty": "Nema preuzimanja stavljenih u red sa ove mašine.\n",
+        "journal_failed": "upozorenje: ažuriranje lokalnog dnevnika preuzimanja nije uspelo: {Msg}"
+      }
+    }
+  },
+  "mcp": {
+    "err": {
+      "no_credentials": "nedostaju akreditivi: podesite DISCODRIVE_SERVER i DISCODRIVE_TOKEN, ili pokrenite `dd-mcp login --server <url>` (ili `dd-cli login`)",
+      "claude_exe_path": "nije uspelo određivanje putanje dd-mcp"
+    },
+    "login": {
+      "flag": {
+        "server": "adresa DiscoDrive servera (obavezno)",
+        "name": "naziv uređaja",
+        "profile": "naziv profila za čuvanje",
+        "no_claude": "ne registruj dd-mcp u Claude konfiguraciji",
+        "allow_changes": "dozvoli alate za izmene u Claude konfiguraciji",
+        "insecure": "прескочи проверу TLS сертификата (самопотписани сервер); чува се у профилу"
+      },
+      "err": {
+        "need_server": "--server <url> je obavezno"
+      },
+      "msg": {
+        "done": "Gotovo. Profil \"{Profile}\" sačuvan. Sada možete pokrenuti `dd-mcp`.\n",
+        "claude_path_failed": "upozorenje: nije uspelo određivanje putanje dd-mcp za Claude konfiguraciju: {Err}\n",
+        "claude_setup_failed": "upozorenje: registracija dd-mcp u Claude nije uspela: {Err}\n",
+        "claude_connected": "Registrovano u Claude: {Changed}\n"
+      }
+    },
+    "setup_claude": {
+      "flag": {
+        "allow_changes": "dozvoli alate za izmene (bez oznake — samo za čitanje)"
+      },
+      "msg": {
+        "none_found": "Nije pronađena nijedna Claude konfiguracija.",
+        "mode_readonly": "samo za čitanje",
+        "mode_changes": "izmene dozvoljene (--allow-changes)",
+        "updated": "Ažurirano: {Path}\n",
+        "mode_line": "Režim: {Mode}. Restartujte Claude da bi se primenilo.\n"
+      }
+    },
+    "print_config": {
+      "flag": {
+        "allow_changes": "uključi alate za izmene u izlaz",
+        "http": "ispiši varijantu za HTTP klijente (npr. 127.0.0.1:8080)"
+      },
+      "msg": {
+        "http_header": "HTTP transport — za klijente koji rade preko URL-a (ChatGPT konektori, udaljeni pristup):\n\n",
+        "http_step1": "  1) pokrenite server:  {Cmd}\n",
+        "http_step2": "  2) URL klijenta:      http://{Addr}\n\n",
+        "http_creds": "Akreditivi dolaze iz profila (dd-mcp login) ili DISCODRIVE_SERVER/DISCODRIVE_TOKEN promenljivih\nokruženja na strani servera — klijentu je potreban samo URL. MCP sloj nema autentifikaciju:\ndržite port lokalnim ili ograničite pristup na nivou mreže/proksija.\n",
+        "stdio_header": "Nalepite u konfiguraciju vašeg MCP klijenta (Claude Desktop/Code, Cursor, Zed itd.):\n\n{Snippet}\n\n",
+        "stdio_creds1": "Akreditivi — iz profila (dd-mcp login), ili ih dodajte u env unos:\n",
+        "stdio_footer": "Za HTTP klijente (npr. ChatGPT): dd-mcp print-config --http 127.0.0.1:8080\n"
+      }
+    },
+    "logout": {
+      "flag": {
+        "profile": "naziv profila (podrazumevano: podrazumevani profil)",
+        "local_only": "ne opozivaj uređaj na serveru, samo zaboravi profil"
+      },
+      "err": {
+        "nothing_to_forget": "nema šta da se zaboravi: ne postoji profil \"{Name}\" i DISCODRIVE_SERVER/DISCODRIVE_TOKEN nisu podešeni"
+      },
+      "msg": {
+        "revoke_failed": "upozorenje: opoziv uređaja na serveru nije uspeo: {Err}\nopozovite ga ručno u DiscoDrive veb interfejsu (odeljak \"Uređaji\").\n",
+        "revoked": "Uređaj opozvan na serveru.",
+        "forgotten": "Profil \"{Name}\" zaboravljen.\n",
+        "env_only_nothing": "Nema lokalnog profila (pokrenuto preko env promenljivih) — nema šta da se zaboravi."
+      }
+    },
+    "http": {
+      "err": {
+        "refuse_no_token": "odbija se povezivanje na {Addr} bez autentifikacije — adresa koja nije loopback zahteva --http-token (ili DISCODRIVE_HTTP_TOKEN). Koristite 127.0.0.1 samo lokalno ili postavite token."
+      },
+      "msg": {
+        "exposed": "dd-mcp: HTTP transport na {Addr} — IZLOŽEN MREŽI, potrebna je autentifikacija bearer-tokenom. Klijenti moraju slati 'Authorization: Bearer <token>'. Poželjno preko reverse proxy-ja sa TLS-om.\n",
+        "local": "dd-mcp: HTTP transport na {Addr}. MCP sloj nema autentifikaciju — držite port lokalnim.\n",
+        "local_auth": "dd-mcp: HTTP transport na {Addr} (loopback), autentifikacija bearer-tokenom uključena.\n"
+      }
+    },
+    "main": {
+      "flag": {
+        "allow_changes": "dozvoli alate za izmene (brisanje datoteka/kontakata/događaja/zadataka/radija/pretplata, premeštanje/preimenovanje, označavanje zadataka, ažuriranje metapodataka knjiga, preuzimanje URL-ova na serveru: čuvanje stranica, preuzimanja, radio, podkasti)",
+        "profile": "naziv profila (podrazumevano: podrazumevani profil)",
+        "http": "pokreni HTTP transport na adresi (npr. 127.0.0.1:8080); podrazumevano: stdio. MCP sloj nema autentifikaciju — držite port lokalnim",
+        "http_token": "zahtevaj ovaj bearer token na HTTP transportu (Authorization: Bearer <token>); obavezno za adrese koje nisu loopback. Rezervna env promenljiva: DISCODRIVE_HTTP_TOKEN",
+        "lang": "jezik izlaza (en/de/es/fr/ru/sr/uk); podrazumevano: iz okruženja"
+      }
+    }
+  },
+  "tool": {
+    "dd_files_list": {
+      "desc": "Lista sadržaja DiscoDrive fascikle po putanji."
+    },
+    "dd_files_read": {
+      "desc": "Прочитај садржај DiscoDrive датотеке као текст. Само текст — бинарну датотеку неоштећену преузмите локалним CLI: dd-cli get <dd-путања>."
+    },
+    "dd_files_search": {
+      "desc": "Pronalaženje datoteka/fascikli po delu naziva (rekurzivno)."
+    },
+    "dd_files_upload": {
+      "desc": "Отпреми текстуалну датотеку у DiscoDrive по путањи. Само текст: бинарни садржај (слике, архиве, PDF) овде би се оштетио — бинарне датотеке отпремајте локалним CLI: dd-cli put <локална-датотека> <dd-путања>."
+    },
+    "dd_files_mkdir": {
+      "desc": "Kreiranje fascikle u DiscoDrive-u po putanji."
+    },
+    "dd_files_delete": {
+      "desc": "Brisanje DiscoDrive datoteke/fascikle (nije nepovratno u uobičajenom smislu — ide u korpu).",
+      "msg": {
+        "cannot_delete_root": "koren se ne može obrisati",
+        "deleted": "obrisano: {Path}"
+      }
+    },
+    "dd_files_move": {
+      "desc": "Premeštanje DiscoDrive čvora u drugu fasciklu.",
+      "msg": {
+        "moved": "premešteno"
+      }
+    },
+    "dd_files_rename": {
+      "desc": "Preimenovanje DiscoDrive čvora.",
+      "msg": {
+        "renamed": "preimenovano u {Name}"
+      }
+    },
+    "dd_contacts_list": {
+      "desc": "Lista DiscoDrive kontakata."
+    },
+    "dd_calendar_list": {
+      "desc": "Lista DiscoDrive kalendara."
+    },
+    "dd_calendar_events": {
+      "desc": "Događaji kalendara u prozoru [start, end] (RFC3339, oba obavezna)."
+    },
+    "dd_calendar_create_event": {
+      "desc": "Kreiranje događaja u DiscoDrive kalendaru (lokacija, opis, ceo dan, ponavljanje, podsetnik). Vreme mora imati eksplicitnu zonu ili Z."
+    },
+    "dd_tasks_list": {
+      "desc": "Lista DiscoDrive zadataka."
+    },
+    "dd_tasks_create": {
+      "desc": "Kreiranje zadatka u DiscoDrive-u."
+    },
+    "dd_contacts_delete": {
+      "desc": "Brisanje DiscoDrive kontakta po uid-u.",
+      "msg": {
+        "deleted": "kontakt {UID} obrisan"
+      }
+    },
+    "dd_calendar_delete_event": {
+      "desc": "Brisanje događaja kalendara po uid-u.",
+      "msg": {
+        "deleted": "događaj {UID} obrisan"
+      }
+    },
+    "dd_tasks_delete": {
+      "desc": "Brisanje DiscoDrive zadatka po uid-u.",
+      "msg": {
+        "deleted": "zadatak {UID} obrisan"
+      }
+    },
+    "dd_tasks_set_done": {
+      "desc": "Označavanje zadatka kao završenog/nezavršenog.",
+      "msg": {
+        "status": "zadatak {UID}: completed={Completed}"
+      }
+    },
+    "dd_music_list": {
+      "desc": "Sadržaj DiscoDrive muzičke fascikle (izvođači/albumi/numere kao datoteke); subpath ulazi dublje."
+    },
+    "dd_music_radio_list": {
+      "desc": "Lista DiscoDrive radio stanica."
+    },
+    "dd_music_podcasts_list": {
+      "desc": "Lista DiscoDrive pretplata na podkaste."
+    },
+    "dd_music_radio_add": {
+      "desc": "Dodavanje radio stanice u DiscoDrive."
+    },
+    "dd_music_podcast_add": {
+      "desc": "Pretplata na podkast preko RSS URL-a fida."
+    },
+    "dd_books_list": {
+      "desc": "DiscoDrive biblioteka knjiga sa filterima (q/author/series/genre, straničenje preko start)."
+    },
+    "dd_books_facets": {
+      "desc": "Dostupne vrednosti filtera biblioteke (autori/serijali/žanrovi)."
+    },
+    "dd_books_meta": {
+      "desc": "Metapodaci knjige po node-id (polje nodeId iz dd_books_list)."
+    },
+    "dd_music_radio_delete": {
+      "desc": "Brisanje radio stanice po id-u.",
+      "msg": {
+        "deleted": "stanica {UID} obrisana"
+      }
+    },
+    "dd_music_podcast_delete": {
+      "desc": "Otkazivanje pretplate na podkast po id-u.",
+      "msg": {
+        "unsubscribed": "pretplata na podkast {UID} otkazana"
+      }
+    },
+    "dd_books_meta_update": {
+      "desc": "Ažuriranje metapodataka knjige (potpuno prepisivanje) po node-id.",
+      "msg": {
+        "updated": "metapodaci za {NodeID} ažurirani"
+      }
+    },
+    "dd_bookmarks_list": {
+      "desc": "Obeleživači pregledača sačuvani u DiscoDrive-u. Vraća ravnu listu; svaka stavka nosi putanju svoje fascikle (na primer \"Toolbar/Dev\") i svoj parent_id. q filtrira po naslovu, url-u ili putanji; folder_id ograničava rezultat na jedno podstablo; folders_only vraća samo fascikle. Velike kolekcije se skraćuju — suzi upit umesto da povećavaš limit."
+    },
+    "dd_bookmarks_add": {
+      "desc": "Kreira obeleživač, ili fasciklu sa obeleživačima kada je is_folder true (fascikla nema url). parent_id mora biti id postojeće fascikle iz dd_bookmarks_list; ostavi ga praznim za najviši nivo."
+    },
+    "dd_bookmarks_update": {
+      "desc": "Preimenuje obeleživač ili fasciklu, menja mu url ili ga premešta u drugu fasciklu. Menjaju se samo polja koja proslediš; prosledi doslovno \"root\" kao parent_id da bi ga premestio na najviši nivo. Premeštanje fascikle u njeno sopstveno podstablo se odbija."
+    },
+    "dd_bookmarks_delete": {
+      "desc": "Briše obeleživač ili fasciklu po id-u. Brisanje fascikle briše i sve što je unutra, a obeleživači nemaju korpu — za razliku od datoteka, ovo se ne može poništiti.",
+      "msg": {
+        "deleted": "obeleživač {ID} obrisan"
+      }
+    },
+    "dd_pocket_list": {
+      "desc": "Članci za kasnije čitanje sačuvani u DiscoDrive-u, najnoviji prvo. Filtriraj po status (pending, processing, done ili error) i po q (deo naslova ili url-a). Serverska preuzimanja se ovde nikada ne pojavljuju — njih proveravaj sa dd_download_status."
+    },
+    "dd_pocket_read": {
+      "desc": "Čita sačuvani članak kao markdown po njegovom id-u iz dd_pocket_list. Samo stavke sa status \"done\" i has_content true imaju telo. Dugački članci se skraćuju — prolazi kroz njih pomoću offset i max_chars."
+    },
+    "dd_pocket_add": {
+      "desc": "Čuva veb stranicu za kasnije čitanje. Server je preuzima i konvertuje u pozadini, pa stavka počinje kao pending — proveri je kasnije sa dd_pocket_list. Čuvanje url-a koji je već sačuvan ne radi ništa, osim što se neuspeli ponovo pokušava; naslov postojeće stavke se ne može promeniti."
+    },
+    "dd_pocket_retry": {
+      "desc": "Ponovo preuzima sačuvani članak po id-u: koristi ga za stavke zaglavljene u status \"error\", ili za osvežavanje već završene. Ne uspeva dok je stavka još u pending ili processing."
+    },
+    "dd_pocket_delete": {
+      "desc": "Uklanja sačuvani članak po id-u. Markdown datoteka koja je već upisana u Downloads fasciklu je obična datoteka i ostaje tamo.",
+      "msg": {
+        "deleted": "sačuvani članak {ID} obrisan"
+      }
+    },
+    "dd_download_add": {
+      "desc": "Traži od servera da preuzme URL u Downloads fasciklu skladišta. Prenos se odvija na serveru, ne ovde, i vraća id sa status pending. VAŽNO: preuzimanja se nigde ne prikazuju u listi — sačuvaj id i proveravaj dd_download_status. Ponovno dodavanje istog url-a pokušava ponovo ako je bio neuspešan."
+    },
+    "dd_download_status": {
+      "desc": "Napredak serverskog preuzimanja, po id-u koji vraća dd_download_add: status (pending, processing, done ili error), bytes_done, size_bytes i tekst greške. Ovo je JEDINI način da se pregleda preuzimanje — ne postoji lista preuzimanja, a dd_pocket_list ih nikada ne prikazuje. Kada se završi, datoteka je u Downloads fascikli, vidljiva kroz dd_files_list."
+    },
+    "dd_download_cancel": {
+      "desc": "Zaustavlja serversko preuzimanje koje je u toku i zaboravlja njegovu stavku iz reda čekanja, po id-u. Već upisani bajtovi ostaju kao datoteka u Downloads fascikli — ukloni je sa dd_files_delete ako je ne želiš.",
+      "msg": {
+        "cancelled": "preuzimanje {ID} otkazano"
+      }
+    },
+    "dd_calendar_get_event": {
+      "desc": "Svi podaci o događaju iz kalendara po uid-u: opis, oznaka celog dana, ponavljanje i podsetnik."
+    },
+    "dd_calendar_update_event": {
+      "desc": "Izmena postojećeg događaja: upisuju se samo prosleđena polja, prazan string briše polje.",
+      "msg": {
+        "no_fields": "nema šta da se menja: prosledite bar jedno polje"
+      }
+    }
+  }
+}

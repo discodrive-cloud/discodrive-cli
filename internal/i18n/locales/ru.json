@@ -1,0 +1,810 @@
+{
+  "core": {
+    "yes": "да",
+    "no": "нет",
+    "hello": "Привет, {Name}"
+  },
+  "err": {
+    "server_status": "сервер вернул {Status}: {Message}",
+    "auth_failed": "авторизация не удалась",
+    "upload_hash_mismatch": "на сервере сохранились не те байты, что были отправлены (sha256 {Got}, ожидался {Want}): загрузите файл ещё раз",
+    "pair_incomplete": "сопряжение не завершено: {Status}",
+    "session_token_invalid": "некорректный токен сессии",
+    "session_token_parse": "не удалось разобрать токен сессии",
+    "session_token_no_device": "в токене сессии нет device_id — отзыв устройства недоступен на этом сервере",
+    "alarm_invalid": "некорректное значение alarm: {Value} (минуты до начала, целое ≥ 0)",
+    "music": {
+      "not_configured": "музыка не настроена: назначьте музыкальную папку в DiscoDrive",
+      "not_folder": "«{Name}» — не папка",
+      "no_folder": "нет папки «{Name}» в музыкальной библиотеке"
+    },
+    "files": {
+      "not_dir": "не директория: {Path}",
+      "no_path": "нет такого пути: {Path}"
+    },
+    "claude": {
+      "config_parse": "конфиг Claude {Path} не парсится"
+    },
+    "bookmarks": {
+      "move_cycle": "нельзя переместить папку в саму себя или в одну из её подпапок",
+      "bad_parent": "родителем должна быть одна из ваших существующих папок закладок",
+      "folder_not_found": "папка закладок не найдена: {Ref}",
+      "folder_ambiguous": "под {Ref} подходит несколько папок закладок — укажите id"
+    },
+    "saved": {
+      "not_retryable": "запись ещё обрабатывается — попробуйте снова, когда она завершится или упадёт с ошибкой",
+      "no_content": "для этой записи нет сохранённого текста (это не статья либо обработка ещё не закончилась)"
+    },
+    "freq_invalid": "недопустимое значение повтора: {Value} (допустимо: {Allowed})",
+    "time_invalid": "недопустимое время: {Value} (ожидается RFC3339, например 2026-07-02T10:00:00Z, или «2026-07-02 10:00»)",
+    "until_without_freq": "«until» имеет смысл только вместе с правилом повтора",
+    "event_ambiguous": "событие {UID} есть в нескольких календарях ({Calendars}) — укажите календарь (--calendar / calendar_id)",
+    "file_read_too_large": "Файл превышает лимит чтения текста 1 МиБ. Скачайте его командой dd-cli get.",
+    "timezone_required": "Укажите часовой пояс IANA через --tz (например Europe/Berlin).",
+    "timezone_invalid": "Некорректный часовой пояс IANA: {Value}"
+  },
+  "pair": {
+    "open_link": "Откройте ссылку и подтвердите устройство:",
+    "enter_code": "Либо на устройстве, где вы уже вошли в DiscoDrive, введите код вручную: {Code}",
+    "waiting": "Жду подтверждения…"
+  },
+  "ui": {
+    "usage_label": "Использование:",
+    "commands_label": "Команды:",
+    "global_flags_label": "Глобальные флаги:",
+    "examples_label": "Примеры:",
+    "irreversible": "⚠️  Необратимая операция.",
+    "root": {
+      "tagline": "dd-cli — терминальный клиент DiscoDrive.",
+      "usage_line": "  dd-cli [глобальные флаги] <команда> [аргументы]",
+      "more": "`dd-cli <команда> --help` — подробности по команде."
+    },
+    "flag": {
+      "json": "  --json            машиночитаемый вывод (по умолчанию — человекочитаемо)",
+      "profile": "  --profile <имя>   выбрать не-дефолтный профиль",
+      "server": "  --server <url>    использовать сохранённый вход для этого адреса сервера",
+      "lang": "  --lang <code>     язык интерфейса (en/de/es/fr/ru/sr/uk)",
+      "version": "  --version         показать версию и выйти"
+    },
+    "unknown_command": "неизвестная команда: {Name}",
+    "error": "ошибка: {Msg}",
+    "no_profile": "нет сохранённого профиля; выполните `dd-cli login` сначала",
+    "server_mismatch": "профиль \"{Profile}\" привязан к {Have}, а не к {Server}; выполните `dd-cli login --server {Server}`, чтобы войти на этот адрес",
+    "no_server_profile": "нет сохранённого входа для {Server}; сначала выполните `dd-cli login --server {Server}`",
+    "cleartext_server": "внимание: {Server} работает по обычному http — токен устройства и все данные передаются без шифрования; используйте https, если сервер не в доверенной сети"
+  },
+  "cmd": {
+    "books": {
+      "summary": "книги: библиотека, поиск, скачивание, метаданные",
+      "usage": "dd-cli books [list] [--q <s>] [--author <s>] [--series <s>] [--genre <s>] [--start <n>] | facets | get <bookID> [--out <path>] | meta <nodeID> | scan | info",
+      "long": "Книжный домен DiscoDrive (электронные книги).\n  list (по умолчанию)   — библиотека; фильтры взаимоисключающие (q|author|series|genre), пагинация --start\n  facets                — доступные значения фильтров (авторы/серии/жанры)\n  get <bookID> [--out]  — скачать файл книги (bookID — поле id из списка)\n  meta <nodeID>         — показать метаданные книги (nodeID — поле nodeId из списка)\n  scan                  — запустить сканирование папки книг (фоном)\n  info                  — показать настройки книг\nПримечание: в списке у книги ДВА идентификатора — id (для get) и nodeId (для meta).\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli books list --q golang",
+        "1": "dd-cli books list --author \"Donald Knuth\" --start 50",
+        "2": "dd-cli books get b1 --out ./book.epub",
+        "3": "dd-cli books meta n1"
+      },
+      "msg": {
+        "need_node_id": "нужен nodeID: dd-cli books meta <nodeID>",
+        "unknown_verb": "неизвестный под-глагол books: {Verb}",
+        "shown": "Показано: {Count} (total={Total}; при фильтре total недостоверен)\n",
+        "facets": "Авторы: {Authors}\nСерии: {Series}\nЖанры: {Genres}\n",
+        "need_book_id": "нужен bookID: dd-cli books get <bookID> [--out <path>]",
+        "saved": "Книга сохранена: {Path}\n",
+        "meta": "Название: {Title}\nАвторы: {Authors}\nСерия: {Series} (#{SeriesIndex})\nЯзык: {Language}\nИздатель: {Publisher}\nДата: {Date}\nОписание: {Description}\n",
+        "scan_started": "Сканирование запущено (выполняется в фоне).",
+        "scan_not_configured": "Папка книг не настроена — сканировать нечего.",
+        "info": "Книги включены: {Enabled}\nПапка: {Folder}\nПароль задан: {HasPassword}\nAPI-ключ задан: {HasApiKey}\n"
+      },
+      "flag": {
+        "q": "полнотекстовый поиск",
+        "author": "фильтр по автору",
+        "series": "фильтр по серии",
+        "genre": "фильтр по жанру",
+        "start": "смещение пагинации (страница — 50 книг)",
+        "out": "путь для сохранения (по умолчанию — <bookID>.bin)"
+      }
+    },
+    "cal": {
+      "summary": "календарь: события, добавление, изменение, календари",
+      "usage": "dd-cli cal events [--from <t>] [--to <t>] | add --summary <s> --start <t> [flags] | show <uid> | set <uid> [flags] | rm <uid> | calendars",
+      "long": "Операции с календарём (время — RFC3339, например 2026-07-02T10:00:00Z; значение без зоны считается местным временем).\n  events [--from <t>] [--to <t>]   — события в интервале времени (по умолчанию: сегодня…+7 дней)\n  add --summary <s> --start <t> [--end <t>] [--location <l>] [--description <d>] [--all-day] [--repeat <daily|weekly|monthly|yearly>] [--until <t>] [--alarm <min>] [--calendar <id>] [--tz <IANA>]  — создать событие\n  show <uid> [--calendar <id>]     — все данные события\n  set <uid> [флаги add]            — изменить только указанные поля (пустое значение очищает поле)\n  rm <uid> [--calendar <id>]       — удалить событие (⚠️ Необратимо)\n  calendars                        — список календарей\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli cal events",
+        "1": "dd-cli cal events --from 2026-07-01T00:00:00Z --to 2026-07-08T00:00:00Z",
+        "2": "dd-cli cal add --summary \"Созвон\" --start 2026-07-03T09:00:00Z --end 2026-07-03T09:30:00Z",
+        "3": "dd-cli cal rm e1",
+        "4": "dd-cli cal add --summary \"Отпуск\" --start 2026-08-01 --end 2026-08-15 --all-day",
+        "5": "dd-cli cal set e1 --alarm 15 --location \"Zoom\""
+      },
+      "msg": {
+        "unknown_verb": "неизвестный под-глагол cal: {Verb}",
+        "need_summary_start": "нужны --summary и --start",
+        "created": "Событие создано: {UID}\n",
+        "need_uid": "нужен uid: dd-cli cal rm <uid>",
+        "deleted": "Удалено событие: {UID}\n",
+        "default_mark": " (по умолчанию)",
+        "need_uid_show": "нужен uid: dd-cli cal show <uid>",
+        "need_uid_set": "нужен uid: dd-cli cal set <uid> [флаги]",
+        "set_no_flags": "нечего менять: укажите хотя бы один флаг поля",
+        "updated": "Событие изменено: {UID}\n"
+      },
+      "flag": {
+        "from": "начало окна RFC3339 (по умолчанию сейчас)",
+        "to": "конец окна RFC3339 (по умолчанию +7 дней)",
+        "summary": "название события (обязательно)",
+        "start": "начало RFC3339 (обязательно)",
+        "end": "конец RFC3339 (по умолчанию +1 час на сервере)",
+        "location": "место",
+        "alarm": "напоминание за N минут до начала (0, 5, 15, 30, 60, 1440)",
+        "calendar": "id календаря (по умолчанию дефолтный)",
+        "rm_calendar": "id календаря",
+        "description": "описание / заметки",
+        "all_day": "событие на весь день (берётся только дата из start/end)",
+        "repeat": "повтор: daily, weekly, monthly, yearly",
+        "until": "повторять до (нужен --repeat)",
+        "summary_set": "название события",
+        "start_set": "начало (RFC3339 или «2026-07-02 10:00»)",
+        "end_set": "конец",
+        "alarm_set": "напоминание за N минут до начала; «» убирает его, «keep» оставляет имеющиеся напоминания как есть",
+        "tz": "Часовой пояс IANA (например Europe/Berlin; по умолчанию — системный)"
+      },
+      "field": {
+        "summary": "Название:",
+        "start": "Начало:",
+        "end": "Конец:",
+        "all_day": "Весь день:",
+        "location": "Место:",
+        "description": "Описание:",
+        "repeat": "Повтор:",
+        "until": "До:",
+        "alarm": "Напоминание:",
+        "calendar": "Календарь:",
+        "uid": "UID:",
+        "tz": "Часовой пояс:"
+      }
+    },
+    "contacts": {
+      "summary": "контакты: список, показать, добавить, удалить",
+      "usage": "dd-cli contacts [list] | show <uid> | add --name <имя> [флаги] | rm <uid>",
+      "long": "Управление контактами.\n  list (по умолчанию)   — список контактов\n  show <uid>            — подробности контакта\n  add --name <имя> [--email <e>] [--phone <p>] [--org <o>]  — создать\n  rm <uid>             — удалить (⚠️ Необратимо)\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli contacts",
+        "1": "dd-cli contacts show c1",
+        "2": "dd-cli contacts add --name \"Боб\" --email bob@x.io",
+        "3": "dd-cli contacts rm c1"
+      },
+      "msg": {
+        "need_uid_show": "нужен uid: dd-cli contacts show <uid>",
+        "unknown_verb": "неизвестный под-глагол contacts: {Verb}",
+        "need_uid_rm": "нужен uid: dd-cli contacts rm <uid>",
+        "org_line": "  организация: {Org}\n",
+        "email_line": "  email ({Type}): {Value}\n",
+        "phone_line": "  тел ({Type}): {Value}\n",
+        "need_name": "нужен --name",
+        "created": "Контакт создан: {UID}\n",
+        "deleted": "Удалён контакт: {UID}\n"
+      },
+      "flag": {
+        "name": "полное имя (обязательно)",
+        "phone": "телефон",
+        "org": "организация"
+      }
+    },
+    "tasks": {
+      "summary": "задачи: список, добавить, отметить, удалить",
+      "usage": "dd-cli tasks [list] | add --summary <s> [флаги] | done <uid> | undone <uid> | rm <uid>",
+      "long": "Управление задачами.\n  list (по умолчанию)   — список задач (незавершённые первыми)\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>]  — создать\n  done <uid>            — отметить выполненной\n  undone <uid>          — снять отметку\n  rm <uid>             — удалить (⚠️ Необратимо)\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli tasks",
+        "1": "dd-cli tasks add --summary \"Позвонить врачу\" --due 2026-07-05T09:00:00Z --priority 1",
+        "2": "dd-cli tasks done t1",
+        "3": "dd-cli tasks rm t1"
+      },
+      "msg": {
+        "need_uid_rm": "нужен uid: dd-cli tasks rm <uid>",
+        "unknown_verb": "неизвестный под-глагол tasks: {Verb}",
+        "due_suffix": " до {Due}",
+        "need_summary": "нужен --summary",
+        "created": "Задача создана: {UID}\n",
+        "need_uid": "нужен uid",
+        "marked_done": "Отмечена выполненной: {UID}\n",
+        "unmarked": "Снята отметка: {UID}\n",
+        "deleted": "Удалена задача: {UID}\n"
+      },
+      "flag": {
+        "summary": "название задачи (обязательно)",
+        "due": "срок RFC3339",
+        "priority": "приоритет 1..9 (1 — высший; 0 — нет)"
+      }
+    },
+    "music": {
+      "summary": "музыка: радио, подкасты, сканирование",
+      "usage": "dd-cli music [radio] | list [подпуть] | radio-add --name <n> --stream <url> [--home <url>] | radio-rm <id> | podcasts | podcast-add <feedURL> | podcast-rm <id> | scan | info",
+      "long": "Музыкальный домен DiscoDrive.\n  radio (по умолчанию)          — список радиостанций\n  list [подпуть]                — содержимое музыкальной папки (артисты/альбомы/треки как файлы);\n                                  подпуть спускается внутрь, напр. list \"Би-2/Лунапарк\"\n  radio-add --name --stream [--home]  — добавить станцию\n  radio-rm <id>                 — удалить станцию (⚠️ Необратимо)\n  podcasts                      — список подписок на подкасты\n  podcast-add <feedURL>         — подписаться на подкаст по URL фида\n  podcast-rm <id>               — отписаться (⚠️ Необратимо)\n  scan                          — запустить сканирование папки музыки (фоном)\n  info                          — показать настройки музыки\nПримечание: полноценная библиотека (поиск/стриминг) — через Subsonic, здесь листинг файловый.\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli music list",
+        "1": "dd-cli music list \"Cosmic Gate\"",
+        "2": "dd-cli music radio-add --name \"Jazz FM\" --stream https://stream.example/jazz",
+        "3": "dd-cli music scan"
+      },
+      "msg": {
+        "need_id_radio_rm": "нужен id: dd-cli music radio-rm <id>",
+        "need_feed_url": "нужен URL фида: dd-cli music podcast-add <feedURL>",
+        "need_id_podcast_rm": "нужен id: dd-cli music podcast-rm <id>",
+        "unknown_verb": "неизвестный под-глагол music: {Verb}",
+        "need_name_stream": "нужны --name и --stream",
+        "station_added": "Станция добавлена: {Name} ({ID})\n",
+        "station_removed": "Станция удалена: {ID}\n",
+        "podcast_added": "Подписка оформлена: {Title} ({ID})\n",
+        "podcast_removed": "Отписка: {ID}\n",
+        "scan_started": "Сканирование запущено (выполняется в фоне).",
+        "scan_not_configured": "Папка музыки не настроена — сканировать нечего.",
+        "info": "Музыка включена: {Enabled}\nПапка: {Folder}\nПароль задан: {HasPassword}\n"
+      },
+      "flag": {
+        "name": "название станции (обязательно)",
+        "stream": "URL потока (обязательно)",
+        "home": "домашняя страница (необязательно)"
+      }
+    },
+    "ls": {
+      "summary": "показать содержимое папки",
+      "usage": "dd-cli ls [path]",
+      "long": "Печатает содержимое папки по пути (по умолчанию — корень). Директории с «/», файлы с размером.\nС --json — массив {id,name,is_dir,size,version}.",
+      "example": {
+        "0": "dd-cli ls",
+        "1": "dd-cli ls docs",
+        "2": "dd-cli --json ls docs"
+      }
+    },
+    "get": {
+      "summary": "скачать файл",
+      "usage": "dd-cli get <path> [dest]",
+      "long": "Скачивает файл по пути. dest — локальный путь (по умолчанию — имя файла в текущем каталоге; «-» — в stdout).",
+      "example": {
+        "0": "dd-cli get docs/a.txt",
+        "1": "dd-cli get docs/a.txt /tmp/a.txt",
+        "2": "dd-cli get docs/a.txt -"
+      },
+      "msg": {
+        "need_path": "нужен путь: dd-cli get <path> [dest]",
+        "is_dir": "{Path} — папка, не файл",
+        "saved": "Сохранено: {Path}\n"
+      }
+    },
+    "put": {
+      "summary": "загрузить файл",
+      "usage": "dd-cli put <local> <path>",
+      "long": "Загружает локальный файл в папку назначения. <path> — путь назначения (каталог/имя). Папка назначения должна существовать.",
+      "example": {
+        "0": "dd-cli put ./report.pdf docs/report.pdf"
+      },
+      "msg": {
+        "need_two_args": "нужны два аргумента: dd-cli put <local> <path>",
+        "not_folder": "{Path} — не папка",
+        "uploaded": "Загружено: {Path}\n"
+      }
+    },
+    "mkdir": {
+      "summary": "создать папку",
+      "usage": "dd-cli mkdir <path>",
+      "long": "Создаёт папку по пути. Родительская папка должна существовать.",
+      "example": {
+        "0": "dd-cli mkdir docs/2026"
+      },
+      "msg": {
+        "need_path": "нужен путь: dd-cli mkdir <path>",
+        "empty_name": "пустое имя папки",
+        "not_folder": "{Path} — не папка",
+        "created": "Создана папка: {Path}\n"
+      }
+    },
+    "mv": {
+      "summary": "переместить/переименовать узел",
+      "usage": "dd-cli mv <src> <dst>",
+      "long": "Перемещает или переименовывает файл/папку. Если dst — существующая папка, src переносится внутрь.",
+      "example": {
+        "0": "dd-cli mv docs/a.txt docs/2026/a.txt",
+        "1": "dd-cli mv old.txt new.txt"
+      },
+      "msg": {
+        "need_two_args": "нужны два аргумента: dd-cli mv <src> <dst>",
+        "cannot_move_root": "нельзя перемещать корень",
+        "moved_into_folder": "Перемещено: {Src} → {Dst}/\n",
+        "moved": "Перемещено: {Src} → {Dst}\n"
+      }
+    },
+    "rm": {
+      "summary": "удалить узел",
+      "usage": "dd-cli rm <path>",
+      "long": "Мягко удаляет файл или папку (вместе с содержимым). Восстановление — через корзину DiscoDrive.",
+      "example": {
+        "0": "dd-cli rm docs/old.txt"
+      },
+      "msg": {
+        "need_path": "нужен путь: dd-cli rm <path>",
+        "cannot_delete_root": "нельзя удалить корень",
+        "deleted": "Удалено: {Path}\n"
+      }
+    },
+    "share": {
+      "summary": "создать ссылку/доступ на узел",
+      "usage": "dd-cli share <path> [--email <addr>] [--access view|edit] [--expires <dur>]",
+      "long": "Создаёт публичную ссылку (по умолчанию) или выдаёт доступ пользователю по email.\n--expires принимает Go-длительность (например 24h). С --json печатает {share_id,token,access}.",
+      "example": {
+        "0": "dd-cli share docs/a.txt",
+        "1": "dd-cli share docs/a.txt --expires 24h",
+        "2": "dd-cli share docs/a.txt --email bob@example.com --access edit"
+      },
+      "flag": {
+        "email": "выдать доступ пользователю по email (иначе — публичная ссылка)",
+        "access": "уровень доступа: view|edit",
+        "expires": "срок действия (например 24h); 0 — бессрочно"
+      },
+      "msg": {
+        "need_path": "нужен путь: dd-cli share <path> [флаги]",
+        "link": "Ссылка: {URL} (доступ: {Access})\n",
+        "granted": "Доступ выдан (share_id: {ShareID}, доступ: {Access})\n"
+      }
+    },
+    "login": {
+      "summary": "войти в DiscoDrive (device-code pairing)",
+      "usage": "dd-cli login --server <url> [--name <имя устройства>] [--no-claude] [--insecure]",
+      "long": "Запускает device-code сопряжение: печатает ссылку подтверждения и короткий код,\nзатем ждёт подтверждения на любом устройстве, где вы залогинены в DiscoDrive.\nПароль/TOTP в терминал не вводятся (работает и для passkey-аккаунтов, и на headless).\nПосле входа предлагает прописать MCP-сервер dd-mcp в конфиг Claude (--no-claude отключает).",
+      "example": {
+        "0": "dd-cli login --server https://drive.example",
+        "1": "dd-cli login --server https://drive.example --name laptop --no-claude"
+      },
+      "flag": {
+        "server": "адрес сервера DiscoDrive (обязателен)",
+        "name": "имя устройства",
+        "profile": "имя профиля для сохранения",
+        "no_claude": "не прописывать dd-mcp в конфиг Claude",
+        "allow_changes": "разрешить изменяющие тулы в конфиге Claude",
+        "insecure": "не проверять TLS-сертификат (самоподписанный сервер); сохраняется в профиле"
+      },
+      "msg": {
+        "need_server": "нужен --server <url>",
+        "done": "Готово. Профиль \"{Profile}\" сохранён.\n",
+        "claude_setup_failed": "предупреждение: не удалось прописать dd-mcp в Claude",
+        "mode_readonly": "только чтение",
+        "mode_changes_allowed": "изменения разрешены",
+        "connected": "Подключено к Claude ({Mode}): {Changed}\n"
+      }
+    },
+    "logout": {
+      "summary": "выйти: отозвать устройство на сервере и забыть профиль",
+      "usage": "dd-cli logout [--profile <имя>] [--local-only]",
+      "long": "Разрывает пару: отзывает текущее устройство на сервере (device-token становится\nнедействительным) и удаляет профиль из локального cli.json.\n  --local-only — не ходить на сервер, только забыть локальный профиль\n                 (например, если токен уже отозван в веб-интерфейсе).",
+      "example": {
+        "0": "dd-cli logout",
+        "1": "dd-cli logout --profile work",
+        "2": "dd-cli logout --local-only"
+      },
+      "flag": {
+        "local_only": "не отзывать устройство на сервере, только забыть профиль"
+      },
+      "msg": {
+        "no_profile": "нет профиля \"{Name}\"",
+        "revoke_failed": "предупреждение: не удалось отозвать устройство на сервере",
+        "revoke_manual_hint": "отзовите его вручную в веб-интерфейсе DiscoDrive (раздел «Устройства»).",
+        "revoked": "Устройство отозвано на сервере.",
+        "forgotten": "Профиль \"{Name}\" забыт.\n"
+      }
+    },
+    "whoami": {
+      "summary": "показать текущего пользователя",
+      "usage": "dd-cli whoami",
+      "long": "Печатает email, роль и id текущего пользователя (GET /me). С --json — объект {id,email,role,tenant_id}.",
+      "example": {
+        "0": "dd-cli whoami",
+        "1": "dd-cli --json whoami"
+      },
+      "msg": {
+        "line": "{Email} (роль: {Role}, id: {ID})\n"
+      }
+    },
+    "setup_claude": {
+      "summary": "прописать dd-mcp в конфиг(и) Claude; переключить режим изменений",
+      "usage": "dd-cli setup-claude [--allow-changes]",
+      "long": "Находит dd-mcp и добавляет его как MCP-сервер в существующие конфиги Claude Desktop/Code.\n  --allow-changes — разрешить изменяющие тулы (удаление/перемещение и пр.)\n  без флага        — режим только чтение (изменяющие тулы выключены)\nПовторный запуск с флагом и без — переключатель режима. После смены перезапустите Claude.",
+      "example": {
+        "0": "dd-cli setup-claude --allow-changes   # разрешить изменения",
+        "1": "dd-cli setup-claude                    # вернуть только чтение"
+      },
+      "flag": {
+        "allow_changes": "разрешить изменяющие тулы"
+      },
+      "msg": {
+        "none_found": "Конфигов Claude не найдено.",
+        "mode_readonly": "только чтение",
+        "mode_changes": "изменения разрешены (--allow-changes)",
+        "updated": "Обновлён: {Path}\n",
+        "mode_line": "Режим: {Mode}. Перезапустите Claude, чтобы применить.\n"
+      }
+    },
+    "print_config": {
+      "summary": "напечатать фрагмент регистрации dd-mcp для любого MCP-клиента",
+      "usage": "dd-cli print-config [--allow-changes] [--http <addr>]",
+      "long": "Печатает готовый к вставке фрагмент регистрации dd-mcp — ничего не меняет на диске.\nВ отличие от setup-claude (правит конфиги Claude), подходит для любого MCP-клиента\n(Cursor, Zed, Cline, ChatGPT-коннекторы и т.д.).\n  без флагов       — stdio-вариант (JSON mcpServers) для локальных клиентов\n  --http <addr>    — вариант для HTTP-клиентов: команда запуска + URL\n  --allow-changes  — включить изменяющие тулы в выводимый фрагмент",
+      "example": {
+        "0": "dd-cli print-config                          # stdio-фрагмент (только чтение)",
+        "1": "dd-cli print-config --allow-changes          # stdio с изменяющими тулами",
+        "2": "dd-cli print-config --http 127.0.0.1:8080    # вариант для ChatGPT/удалённых клиентов"
+      },
+      "flag": {
+        "allow_changes": "включить изменяющие тулы в вывод",
+        "http": "печатать вариант для HTTP-клиентов (напр. 127.0.0.1:8080)"
+      },
+      "msg": {
+        "http_header": "HTTP-транспорт — для клиентов, работающих по URL (ChatGPT-коннекторы, удалённый доступ):\n\n",
+        "http_step1": "  1) запустите сервер:  {Cmd}\n",
+        "http_step2": "  2) URL для клиента:   http://{Addr}\n\n",
+        "http_creds": "Учётные данные берутся из профиля (dd-cli login) или env DISCODRIVE_SERVER/DISCODRIVE_TOKEN\nна стороне сервера — клиенту нужен только URL. У MCP-слоя нет аутентификации:\nдержите порт локальным или закрывайте доступ на уровне сети/прокси.\n",
+        "stdio_header": "Вставьте в конфиг MCP-клиента (Claude Desktop/Code, Cursor, Zed и др.):\n\n{Snippet}\n\n",
+        "stdio_creds1": "Креды — из профиля (dd-cli login) либо добавьте в запись env:\n",
+        "stdio_footer": "Для клиентов по HTTP (напр. ChatGPT): dd-cli print-config --http 127.0.0.1:8080\n"
+      }
+    },
+    "rename": {
+      "summary": "переименовать файл/папку на месте",
+      "usage": "dd-cli rename <path> <new-name>",
+      "long": "Переименовывает файл или папку на месте (в той же папке). <new-name> — только имя, не путь; для перемещения между папками используйте `mv`.",
+      "example": {
+        "0": "dd-cli rename docs/old.txt new.txt",
+        "1": "dd-cli rename docs/2025 2026"
+      },
+      "msg": {
+        "need_args": "нужны два аргумента: dd-cli rename <path> <new-name>",
+        "cannot_rename_root": "нельзя переименовать корень",
+        "name_has_slash": "<new-name> должно быть именем, а не путём (для перемещения — `mv`): {Name}",
+        "renamed": "Переименовано: {Path} → {Name}\n"
+      }
+    },
+    "bookmarks": {
+      "summary": "закладки браузера: дерево, добавление, правка, удаление",
+      "usage": "dd-cli bookmarks [tree] | list [флаги] | add <url> [флаги] | mkdir <title> [флаги] | edit <id> [флаги] | rm <id>",
+      "long": "Закладки браузера, синхронизированные расширением.\n  tree (по умолчанию)   — всё дерево, id в первой колонке\n  list [--q <s>] [--folder <f>] [--folders]  — плоский список с путями папок\n  add <url> [--title <s>] [--parent <f>] [--position <n>]  — новая закладка\n  mkdir <title> [--parent <f>]  — новая папка\n  edit <id> [--title <s>] [--url <u>] [--parent <f>] [--position <n>]  — переименовать или переместить\n  rm <id>               — удалить, папку — вместе с содержимым (⚠️ Необратимо)\nПапка <f> — это либо id, либо путь вида «Toolbar/Dev».\nОтправляются только те флаги, которые вы указали, поэтому --parent \"\" — это осознанный перенос на верхний уровень.\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli bookmarks",
+        "1": "dd-cli bookmarks list --q go.dev",
+        "2": "dd-cli bookmarks mkdir Dev --parent \"Bookmarks Toolbar\"",
+        "3": "dd-cli bookmarks add https://go.dev --title Go --parent \"Bookmarks Toolbar/Dev\"",
+        "4": "dd-cli bookmarks edit b7f8g9 --title \"Сайт Go\""
+      },
+      "flag": {
+        "q": "подстрока названия, url или пути папки",
+        "folder": "ограничить этой папкой и всем, что внутри неё: id или путь вида «Toolbar/Dev»",
+        "folders": "только папки",
+        "title": "название",
+        "url": "новый URL",
+        "parent": "родительская папка: id или путь вида «Toolbar/Dev»; пусто = верхний уровень",
+        "parent_move": "переместить в эту папку: id или путь вида «Toolbar/Dev»; передайте пустое значение, чтобы перенести на верхний уровень",
+        "position": "позиция среди соседей (по умолчанию — после последнего)"
+      },
+      "msg": {
+        "need_id": "нужен id",
+        "need_url": "нужен url: dd-cli bookmarks add <url>",
+        "need_title": "нужно название: dd-cli bookmarks mkdir <title>",
+        "nothing_to_change": "нечего менять: передайте хотя бы один из --title, --url, --parent, --position",
+        "unknown_verb": "неизвестный под-глагол bookmarks: {Verb}",
+        "added": "Закладка добавлена: {ID} {Title}\n",
+        "folder_created": "Папка создана: {ID} {Title}\n",
+        "updated": "Закладка обновлена: {ID} {Title}\n",
+        "deleted": "Закладка удалена: {ID}\n"
+      }
+    },
+    "pocket": {
+      "summary": "статьи «прочитать позже»: список, добавление, чтение, удаление",
+      "usage": "dd-cli pocket [list] [флаги] | add <url> [--title <s>] | read <id> [--out <file>] | retry <id> | rm <id>",
+      "long": "Статьи «прочитать позже». Сервер сам скачивает и конвертирует страницу в фоне,\nпоэтому свежая запись сначала имеет статус pending.\n  list (по умолчанию)   — сначала новые; --status <s> --q <s> --limit <n> --offset <n>\n  add <url> [--title <s>]  — сохранить страницу\n  read <id> [--out <file>]  — markdown в stdout или в файл\n  retry <id>            — скачать заново (для статуса error)\n  rm <id>               — удалить; уже записанный файл markdown остаётся (⚠️ Необратимо)\nСерверные закачки здесь не показываются никогда — смотрите dd-cli download.\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli pocket list --status error",
+        "1": "dd-cli pocket add https://example.org/article",
+        "2": "dd-cli pocket read s1 --out article.md",
+        "3": "dd-cli pocket rm s1"
+      },
+      "flag": {
+        "status": "фильтр по статусу: pending, processing, done или error",
+        "q": "подстрока названия или url",
+        "limit": "размер страницы, 1..500 (по умолчанию 50)",
+        "offset": "смещение пагинации",
+        "title": "переопределить название; игнорируется, если этот url уже сохранён",
+        "out": "записать markdown в этот файл вместо stdout"
+      },
+      "msg": {
+        "need_id": "нужен id",
+        "need_url": "нужен url: dd-cli pocket add <url>",
+        "unknown_verb": "неизвестный под-глагол pocket: {Verb}",
+        "saved": "Сохранено: {ID} ({Status})\n",
+        "written": "Записано: {Path}\n",
+        "retrying": "Скачиваем заново: {ID}\n",
+        "deleted": "Сохранённая статья удалена: {ID}\n"
+      }
+    },
+    "download": {
+      "summary": "серверные закачки: очередь, прогресс, отмена",
+      "usage": "dd-cli download [list] | add <url> [--title <s>] [--cookie <s>] | status <id> | rm <id>",
+      "long": "Закачки, которые сервер выполняет в вашу папку Downloads.\n  add <url> [--title <s>] [--cookie <s>]  — поставить в очередь; передача идёт на сервере\n  status <id>           — прогресс одной закачки\n  list (по умолчанию)   — закачки, поставленные в очередь с этой машины\n  rm <id>               — остановить и забыть запись очереди; уже записанные\n                          байты остаются файлом (⚠️ Необратимо)\nСервер не хранит списка закачек и забывает завершённые, поэтому list читает локальный\nжурнал downloads.json рядом с cli.json; id, поставленных в очередь в другом месте, там нет.\nС --json вывод машиночитаемый.",
+      "example": {
+        "0": "dd-cli download add https://example.org/ubuntu.iso",
+        "1": "dd-cli download status d1",
+        "2": "dd-cli download rm d1"
+      },
+      "flag": {
+        "title": "метка для записи в очереди",
+        "cookie": "заголовок Cookie для сайта, требующего входа"
+      },
+      "msg": {
+        "need_id": "нужен id",
+        "need_url": "нужен url: dd-cli download add <url>",
+        "unknown_verb": "неизвестный под-глагол download: {Verb}",
+        "queued": "Поставлено в очередь: {ID} ({Status})\n",
+        "cancelled": "Закачка отменена: {ID}\n",
+        "journal_empty": "С этой машины закачки в очередь не ставились.\n",
+        "journal_failed": "предупреждение: не удалось обновить локальный журнал закачек: {Msg}"
+      }
+    }
+  },
+  "mcp": {
+    "err": {
+      "no_credentials": "нет учётных данных: задайте DISCODRIVE_SERVER и DISCODRIVE_TOKEN, либо выполните `dd-mcp login --server <url>` (или `dd-cli login`)",
+      "claude_exe_path": "не удалось определить путь dd-mcp"
+    },
+    "login": {
+      "flag": {
+        "server": "адрес сервера DiscoDrive (обязателен)",
+        "name": "имя устройства",
+        "profile": "имя профиля для сохранения",
+        "no_claude": "не прописывать dd-mcp в конфиг Claude",
+        "allow_changes": "разрешить изменяющие тулы в конфиге Claude",
+        "insecure": "не проверять TLS-сертификат (самоподписанный сервер); сохраняется в профиле"
+      },
+      "err": {
+        "need_server": "нужен --server <url>"
+      },
+      "msg": {
+        "done": "Готово. Профиль \"{Profile}\" сохранён. Теперь можно запускать `dd-mcp`.\n",
+        "claude_path_failed": "предупреждение: не удалось определить путь dd-mcp для конфига Claude: {Err}\n",
+        "claude_setup_failed": "предупреждение: не удалось прописать dd-mcp в Claude: {Err}\n",
+        "claude_connected": "Прописано в Claude: {Changed}\n"
+      }
+    },
+    "setup_claude": {
+      "flag": {
+        "allow_changes": "разрешить изменяющие тулы (без флага — только чтение)"
+      },
+      "msg": {
+        "none_found": "Конфигов Claude не найдено.",
+        "mode_readonly": "только чтение",
+        "mode_changes": "изменения разрешены (--allow-changes)",
+        "updated": "Обновлён: {Path}\n",
+        "mode_line": "Режим: {Mode}. Перезапустите Claude, чтобы применить.\n"
+      }
+    },
+    "print_config": {
+      "flag": {
+        "allow_changes": "включить изменяющие тулы в вывод",
+        "http": "печатать вариант для HTTP-клиентов (напр. 127.0.0.1:8080)"
+      },
+      "msg": {
+        "http_header": "HTTP-транспорт — для клиентов, работающих по URL (ChatGPT-коннекторы, удалённый доступ):\n\n",
+        "http_step1": "  1) запустите сервер:  {Cmd}\n",
+        "http_step2": "  2) URL для клиента:   http://{Addr}\n\n",
+        "http_creds": "Учётные данные берутся из профиля (dd-mcp login) или env DISCODRIVE_SERVER/DISCODRIVE_TOKEN\nна стороне сервера — клиенту нужен только URL. У MCP-слоя нет аутентификации:\nдержите порт локальным или закрывайте доступ на уровне сети/прокси.\n",
+        "stdio_header": "Вставьте в конфиг MCP-клиента (Claude Desktop/Code, Cursor, Zed и др.):\n\n{Snippet}\n\n",
+        "stdio_creds1": "Креды — из профиля (dd-mcp login) либо добавьте в запись env:\n",
+        "stdio_footer": "Для клиентов по HTTP (напр. ChatGPT): dd-mcp print-config --http 127.0.0.1:8080\n"
+      }
+    },
+    "logout": {
+      "flag": {
+        "profile": "имя профиля (по умолчанию — дефолтный)",
+        "local_only": "не отзывать устройство на сервере, только забыть профиль"
+      },
+      "err": {
+        "nothing_to_forget": "нечего забывать: нет профиля \"{Name}\" и не заданы DISCODRIVE_SERVER/DISCODRIVE_TOKEN"
+      },
+      "msg": {
+        "revoke_failed": "предупреждение: не удалось отозвать устройство на сервере: {Err}\nотзовите его вручную в веб-интерфейсе DiscoDrive (раздел «Устройства»).\n",
+        "revoked": "Устройство отозвано на сервере.",
+        "forgotten": "Профиль \"{Name}\" забыт.\n",
+        "env_only_nothing": "Локального профиля нет (работа через env-переменные) — забывать нечего."
+      }
+    },
+    "http": {
+      "err": {
+        "refuse_no_token": "отказ привязаться к {Addr} без аутентификации — для не-loopback адреса обязателен --http-token (или DISCODRIVE_HTTP_TOKEN). Используйте 127.0.0.1 для локального доступа либо задайте токен."
+      },
+      "msg": {
+        "exposed": "dd-mcp: HTTP-транспорт на {Addr} — ДОСТУПЕН ПО СЕТИ, требуется аутентификация по bearer-токену. Клиенты должны слать 'Authorization: Bearer <token>'. Лучше через reverse-proxy с TLS.\n",
+        "local": "dd-mcp: HTTP-транспорт на {Addr}. У MCP-слоя нет аутентификации — держите порт локальным.\n",
+        "local_auth": "dd-mcp: HTTP-транспорт на {Addr} (loopback), аутентификация по bearer-токену включена.\n"
+      }
+    },
+    "main": {
+      "flag": {
+        "allow_changes": "разрешить изменяющие тулы (удаление файлов/контактов/событий/задач/радио/подписок, move/rename, отметка задач, обновление метаданных книг, загрузки по URL на сервере: сохранение страниц, загрузки, радио, подкасты)",
+        "profile": "имя профиля (по умолчанию — дефолтный)",
+        "http": "запустить HTTP-транспорт на адресе (напр. 127.0.0.1:8080); по умолчанию — stdio. У MCP-слоя нет аутентификации — держите порт локальным",
+        "http_token": "требовать этот bearer-токен на HTTP-транспорте (Authorization: Bearer <token>); обязателен для не-loopback адресов. Запасная env-переменная: DISCODRIVE_HTTP_TOKEN",
+        "lang": "язык вывода (en/de/es/fr/ru/sr/uk); по умолчанию — из окружения"
+      }
+    }
+  },
+  "tool": {
+    "dd_files_list": {
+      "desc": "Список содержимого папки DiscoDrive по пути."
+    },
+    "dd_files_read": {
+      "desc": "Прочитать содержимое файла DiscoDrive как текст. Только текст — бинарный файл без искажений скачивайте локальной CLI: dd-cli get <путь-в-dd>."
+    },
+    "dd_files_search": {
+      "desc": "Найти файлы/папки по подстроке имени (рекурсивно)."
+    },
+    "dd_files_upload": {
+      "desc": "Загрузить текстовый файл в DiscoDrive по пути. Только текст: бинарное содержимое (картинки, архивы, PDF) здесь испортится — бинарники загружайте локальной CLI: dd-cli put <локальный-файл> <путь-в-dd>."
+    },
+    "dd_files_mkdir": {
+      "desc": "Создать папку в DiscoDrive по пути."
+    },
+    "dd_files_delete": {
+      "desc": "Удалить файл/папку DiscoDrive (необратимо в обычном смысле — в корзину).",
+      "msg": {
+        "cannot_delete_root": "нельзя удалить корень",
+        "deleted": "удалено: {Path}"
+      }
+    },
+    "dd_files_move": {
+      "desc": "Переместить узел DiscoDrive в другую папку.",
+      "msg": {
+        "moved": "перемещено"
+      }
+    },
+    "dd_files_rename": {
+      "desc": "Переименовать узел DiscoDrive.",
+      "msg": {
+        "renamed": "переименовано в {Name}"
+      }
+    },
+    "dd_contacts_list": {
+      "desc": "Список контактов DiscoDrive."
+    },
+    "dd_calendar_list": {
+      "desc": "Список календарей DiscoDrive."
+    },
+    "dd_calendar_events": {
+      "desc": "События календаря в окне [start, end] (RFC3339, оба обязательны)."
+    },
+    "dd_calendar_create_event": {
+      "desc": "Создать событие в календаре DiscoDrive (место, описание, весь день, повтор, напоминание). Время должно содержать явную зону или Z."
+    },
+    "dd_tasks_list": {
+      "desc": "Список задач DiscoDrive."
+    },
+    "dd_tasks_create": {
+      "desc": "Создать задачу в DiscoDrive."
+    },
+    "dd_contacts_delete": {
+      "desc": "Удалить контакт DiscoDrive по uid.",
+      "msg": {
+        "deleted": "удалён контакт {UID}"
+      }
+    },
+    "dd_calendar_delete_event": {
+      "desc": "Удалить событие календаря по uid.",
+      "msg": {
+        "deleted": "удалено событие {UID}"
+      }
+    },
+    "dd_tasks_delete": {
+      "desc": "Удалить задачу DiscoDrive по uid.",
+      "msg": {
+        "deleted": "удалена задача {UID}"
+      }
+    },
+    "dd_tasks_set_done": {
+      "desc": "Отметить задачу выполненной/невыполненной.",
+      "msg": {
+        "status": "задача {UID}: completed={Completed}"
+      }
+    },
+    "dd_music_list": {
+      "desc": "Содержимое музыкальной папки DiscoDrive (артисты/альбомы/треки как файлы); subpath спускается внутрь."
+    },
+    "dd_music_radio_list": {
+      "desc": "Список радиостанций DiscoDrive."
+    },
+    "dd_music_podcasts_list": {
+      "desc": "Список подписок на подкасты DiscoDrive."
+    },
+    "dd_music_radio_add": {
+      "desc": "Добавить радиостанцию в DiscoDrive."
+    },
+    "dd_music_podcast_add": {
+      "desc": "Подписаться на подкаст по URL RSS-фида."
+    },
+    "dd_books_list": {
+      "desc": "Библиотека книг DiscoDrive с фильтрами (q/author/series/genre, пагинация start)."
+    },
+    "dd_books_facets": {
+      "desc": "Доступные значения фильтров библиотеки (авторы/серии/жанры)."
+    },
+    "dd_books_meta": {
+      "desc": "Метаданные книги по node-id (поле nodeId из dd_books_list)."
+    },
+    "dd_music_radio_delete": {
+      "desc": "Удалить радиостанцию по id.",
+      "msg": {
+        "deleted": "удалена станция {UID}"
+      }
+    },
+    "dd_music_podcast_delete": {
+      "desc": "Отписаться от подкаста по id.",
+      "msg": {
+        "unsubscribed": "отписка от подкаста {UID}"
+      }
+    },
+    "dd_books_meta_update": {
+      "desc": "Обновить метаданные книги (полная перезапись) по node-id.",
+      "msg": {
+        "updated": "обновлены метаданные {NodeID}"
+      }
+    },
+    "dd_bookmarks_list": {
+      "desc": "Закладки браузера, хранящиеся в DiscoDrive. Возвращает плоский список; у каждого элемента есть путь его папки (например \"Toolbar/Dev\") и parent_id. q фильтрует по названию, url или пути; folder_id ограничивает результат одним поддеревом; folders_only возвращает только папки. Большие коллекции обрезаются — сужайте запрос, а не поднимайте limit."
+    },
+    "dd_bookmarks_add": {
+      "desc": "Создать закладку или папку закладок, если is_folder равно true (у папки нет url). parent_id должен быть id существующей папки из dd_bookmarks_list; для верхнего уровня оставьте его пустым."
+    },
+    "dd_bookmarks_update": {
+      "desc": "Переименовать закладку или папку, изменить её url либо переместить в другую папку. Меняются только переданные поля; чтобы перенести на верхний уровень, передайте в parent_id буквальное \"root\". Перемещение папки в её собственное поддерево отклоняется."
+    },
+    "dd_bookmarks_delete": {
+      "desc": "Удалить закладку или папку по id. Удаление папки удаляет и всё, что внутри неё, а корзины у закладок нет — в отличие от файлов, это уже не отменить.",
+      "msg": {
+        "deleted": "закладка {ID} удалена"
+      }
+    },
+    "dd_pocket_list": {
+      "desc": "Статьи «прочитать позже», сохранённые в DiscoDrive, сначала новые. Фильтры: status (pending, processing, done или error) и q (подстрока названия или url). Серверные закачки здесь не появляются никогда — опрашивайте их через dd_download_status."
+    },
+    "dd_pocket_read": {
+      "desc": "Прочитать сохранённую статью как markdown по её id из dd_pocket_list. Тело есть только у записей со статусом \"done\" и has_content true. Длинные статьи обрезаются — листайте их через offset и max_chars."
+    },
+    "dd_pocket_add": {
+      "desc": "Сохранить веб-страницу, чтобы прочитать позже. Сервер скачивает и конвертирует её в фоне, поэтому запись сначала имеет статус pending — проверяйте её через dd_pocket_list. Сохранение уже сохранённого url ничего не делает, кроме повторной попытки для упавшего; название существующей записи изменить нельзя."
+    },
+    "dd_pocket_retry": {
+      "desc": "Скачать сохранённую статью заново по id: для записей, застрявших в статусе \"error\", или чтобы обновить завершённую. Пока запись в pending или processing, вызов завершается ошибкой."
+    },
+    "dd_pocket_delete": {
+      "desc": "Удалить сохранённую статью по id. Файл markdown, уже записанный в папку Downloads, — обычный файл и остаётся на месте.",
+      "msg": {
+        "deleted": "сохранённая статья {ID} удалена"
+      }
+    },
+    "dd_download_add": {
+      "desc": "Попросить сервер скачать URL в папку Downloads хранилища. Передача идёт на сервере, а не здесь, и возвращает id со статусом pending. ВАЖНО: списка закачек нигде нет — сохраните id и опрашивайте dd_download_status. Повторное добавление того же url перезапускает закачку, если она упала."
+    },
+    "dd_download_status": {
+      "desc": "Прогресс серверной закачки по id, который вернул dd_download_add: status (pending, processing, done или error), bytes_done, size_bytes и текст ошибки. Это ЕДИНСТВЕННЫЙ способ посмотреть закачку — списка закачек не существует, и dd_pocket_list их никогда не показывает. Когда она done, файл лежит в папке Downloads и виден через dd_files_list."
+    },
+    "dd_download_cancel": {
+      "desc": "Остановить идущую серверную закачку и забыть её запись в очереди, по id. Уже записанные байты остаются файлом в папке Downloads — удалите его через dd_files_delete, если он не нужен.",
+      "msg": {
+        "cancelled": "закачка {ID} отменена"
+      }
+    },
+    "dd_calendar_get_event": {
+      "desc": "Все данные события календаря по uid: описание, признак «весь день», повтор и напоминание."
+    },
+    "dd_calendar_update_event": {
+      "desc": "Изменить существующее событие календаря: записываются только переданные поля, пустая строка очищает поле.",
+      "msg": {
+        "no_fields": "нечего менять: передайте хотя бы одно поле"
+      }
+    }
+  }
+}

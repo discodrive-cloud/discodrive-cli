@@ -1,0 +1,19 @@
+# Приватные рабочие доки (спеки, планы, референс) — не публичные, не в реп
+.local/
+
+# Бинарники
+/dd-cli
+/dd-mcp
+*.test
+*.out
+
+# Рабочий каталог subagent-driven-development (ledger/брифы/диффы ревью)
+.superpowers/
+
+# Отчёты безопасности gstack/cso — локальные, не в реп
+.gstack/
+
+.DS_Store
+
+# Release build output
+/dist/

@@ -1,0 +1,271 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+# Build jobs run third-party code (Go modules): they get a read-only token. Only the
+# release job can write. Same layout as discodrive-apps: the job that builds never sees
+# the signing secrets, the job that signs never builds.
+permissions:
+  contents: read
+
+env:
+  # An exact patch, so a runner's cached older Go is never used for a release.
+  GO_VERSION: "1.26.8"
+
+jobs:
+  # Builds and tests every platform. No secrets. Linux and Windows archives are final
+  # here; the macOS binaries go to sign-macos unsigned.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Resolve version
+        run: |
+          V="0.0.0"
+          case "$GITHUB_REF" in refs/tags/v*) V="${GITHUB_REF_NAME#v}";; esac
+          if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$V' is not an x.y.z[-pre] version" >&2
+            exit 1
+          fi
+          echo "VER=$V" >> "$GITHUB_ENV"
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Build all platforms
+        run: scripts/build-release.sh "$VER"
+      - name: Package Linux and Windows
+        run: |
+          mkdir -p out
+          for d in linux-amd64 linux-arm64; do
+            cp LICENSE README.md "dist/$d/"
+            tar czf "out/discodrive-cli-$VER-$d.tar.gz" -C "dist/$d" .
+          done
+          for d in windows-amd64 windows-arm64; do
+            cp LICENSE README.md "dist/$d/"
+            (cd "dist/$d" && zip -q "../../out/discodrive-cli-$VER-$d.zip" ./*)
+          done
+          ls -la out
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: other-platforms
+          path: out/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: darwin-unsigned
+          path: |
+            dist/darwin-amd64/dd-cli
+            dist/darwin-amd64/dd-mcp
+            dist/darwin-arm64/dd-cli
+            dist/darwin-arm64/dd-mcp
+          if-no-files-found: error
+
+  # Signing only, tag builds only. Never installs a toolchain or runs go: it takes the
+  # four expected Mach-O files from the build artifact (anything else in it is
+  # rejected, nothing from it is executed), signs them with the scripts from this
+  # checkout, notarizes them, and packages them with LICENSE/README from the checkout.
+  # What this does NOT guarantee: a compromised build job could still hand over a
+  # malicious but well-formed binary, and this job would sign it.
+  sign-macos:
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-latest
+    env:
+      # Same secrets as discodrive-apps: Developer ID certificate (+ key) as a base64
+      # .p12, and an App Store Connect API key for notarytool.
+      HAS_SIGNING: ${{ secrets.MACOS_CERT_P12 != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Refuse an unsigned tagged release
+        # The Homebrew formula points at the macOS archives by name; an unsigned one
+        # published under that name would reach brew users un-notarized.
+        if: env.HAS_SIGNING != 'true'
+        run: |
+          echo "::error::MACOS_CERT_P12 is not configured; tagged releases must be signed and notarized"
+          exit 1
+      - name: Validate tag version
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VER' is not an x.y.z[-pre] version" >&2
+            exit 1
+          fi
+          echo "VER=$VER" >> "$GITHUB_ENV"
+      - name: Download unsigned macOS binaries
+        # Into $RUNNER_TEMP, not the checkout: untrusted until the next step checks it.
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: darwin-unsigned
+          path: ${{ runner.temp }}/unsigned
+      - name: Accept exactly the expected Mach-O files
+        run: |
+          set -euo pipefail
+          src="$RUNNER_TEMP/unsigned"
+          expected="$(printf '%s\n' darwin-amd64/dd-cli darwin-amd64/dd-mcp darwin-arm64/dd-cli darwin-arm64/dd-mcp)"
+          actual="$(cd "$src" && find . -mindepth 1 ! -type d | sed 's|^\./||' | sort)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::unexpected artifact contents:" >&2
+            echo "$actual" >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/work"
+          for f in $expected; do
+            if [ -L "$src/$f" ] || [ ! -f "$src/$f" ]; then
+              echo "::error::$f is not a regular file" >&2
+              exit 1
+            fi
+            arch="${f%%/*}"; arch="${arch#darwin-}"
+            [ "$arch" = amd64 ] && want=x86_64 || want=arm64
+            kind="$(/usr/bin/file -b "$src/$f")"
+            if [ "$kind" != "Mach-O 64-bit executable $want" ]; then
+              echo "::error::$f: '$kind', expected a $want Mach-O executable" >&2
+              exit 1
+            fi
+            mkdir -p "$RUNNER_TEMP/work/${f%/*}"
+            cp "$src/$f" "$RUNNER_TEMP/work/$f"
+            chmod 755 "$RUNNER_TEMP/work/$f"
+          done
+      - name: Import Developer ID certificate + notarization key
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KEYCHAIN"
+          echo "$NOTARY_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          echo "NOTARY_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+          echo "SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+          # From here on an unsigned or un-notarized artefact is a failure, not a notice.
+          echo "SIGN_REQUIRED=1" >> "$GITHUB_ENV"
+      - name: Sign
+        run: |
+          w="$RUNNER_TEMP/work"
+          scripts/macos-sign.sh "$w"/darwin-amd64/dd-cli "$w"/darwin-amd64/dd-mcp \
+            "$w"/darwin-arm64/dd-cli "$w"/darwin-arm64/dd-mcp
+      - name: Notarize
+        # Bare executables cannot be stapled: Apple records the ticket, and Gatekeeper
+        # checks it online the first time a downloaded binary runs.
+        env:
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          (cd "$RUNNER_TEMP/work" && /usr/bin/ditto -c -k . "$RUNNER_TEMP/notarize.zip")
+          scripts/macos-notarize.sh "$RUNNER_TEMP/notarize.zip"
+      - name: Remove the signing keychain
+        if: always() && env.SIGNING_KEYCHAIN != ''
+        run: security delete-keychain "$SIGNING_KEYCHAIN"; rm -f "$NOTARY_KEY_PATH"
+      - name: Package
+        run: |
+          mkdir -p out
+          for d in darwin-amd64 darwin-arm64; do
+            cp LICENSE README.md "$RUNNER_TEMP/work/$d/"
+            COPYFILE_DISABLE=1 /usr/bin/tar czf "out/discodrive-cli-$VER-$d.tar.gz" -C "$RUNNER_TEMP/work/$d" .
+          done
+          ls -la out
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: macos-signed
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    needs: [build, sign-macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    # Approval gate: add required reviewers to the "release" environment in repo
+    # Settings > Environments, as in discodrive-apps.
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Validate tag version
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VER' is not an x.y.z[-pre] version" >&2
+            exit 1
+          fi
+          echo "VER=$VER" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          path: artifacts
+      - name: Collect release assets
+        # Exact names, no glob: darwin-unsigned is the handoff to sign-macos and must
+        # never reach the release.
+        run: |
+          mkdir -p release
+          for d in darwin-amd64 darwin-arm64; do
+            cp "artifacts/macos-signed/discodrive-cli-$VER-$d.tar.gz" release/
+          done
+          for d in linux-amd64 linux-arm64; do
+            cp "artifacts/other-platforms/discodrive-cli-$VER-$d.tar.gz" release/
+          done
+          for d in windows-amd64 windows-arm64; do
+            cp "artifacts/other-platforms/discodrive-cli-$VER-$d.zip" release/
+          done
+          (cd release && sha256sum -- * > checksums.txt)
+          ls -la release; cat release/checksums.txt
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: release/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+  homebrew:
+    needs: [release]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Validate tag version
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VER' is not an x.y.z[-pre] version" >&2
+            exit 1
+          fi
+      - name: Update tap formula
+        # A deploy key with write access to the tap only (no expiry, unlike a PAT).
+        env:
+          TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          KEY="$RUNNER_TEMP/tap_key"
+          printf '%s\n' "$TAP_DEPLOY_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          trap 'rm -f "$KEY"' EXIT
+          # GitHub's published host key (api.github.com/meta), pinned.
+          HOSTS="$RUNNER_TEMP/known_hosts"
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$HOSTS"
+          export GIT_SSH_COMMAND="ssh -i $KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOSTS"
+          git clone git@github.com:discodrive-cloud/homebrew-tap.git tap
+          scripts/gen-brew-formula.sh "$VER" > tap/Formula/discodrive-cli.rb
+          cd tap
+          git config user.name  "discodrive-cloud"
+          git config user.email "info@discodrive.app"
+          git add Formula/discodrive-cli.rb
+          git diff --cached --quiet || git commit -m "discodrive-cli $VER"
+          git push

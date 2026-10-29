@@ -1,0 +1,810 @@
+{
+  "core": {
+    "yes": "yes",
+    "no": "no",
+    "hello": "Hello, {Name}"
+  },
+  "err": {
+    "server_status": "server returned {Status}: {Message}",
+    "auth_failed": "authorization failed",
+    "upload_hash_mismatch": "the server stored different bytes than were sent (sha256 {Got}, expected {Want}): upload the file again",
+    "pair_incomplete": "pairing not completed: {Status}",
+    "session_token_invalid": "invalid session token",
+    "session_token_parse": "cannot parse session token",
+    "session_token_no_device": "session token has no device_id — device revocation is unavailable on this server",
+    "alarm_invalid": "invalid alarm value: {Value} (minutes before start, integer ≥ 0)",
+    "music": {
+      "not_configured": "music is not configured: assign a music folder in DiscoDrive",
+      "not_folder": "\"{Name}\" is not a folder",
+      "no_folder": "no folder \"{Name}\" in the music library"
+    },
+    "files": {
+      "not_dir": "not a directory: {Path}",
+      "no_path": "no such path: {Path}"
+    },
+    "claude": {
+      "config_parse": "Claude config {Path} cannot be parsed"
+    },
+    "bookmarks": {
+      "move_cycle": "cannot move a folder into itself or into one of its own subfolders",
+      "bad_parent": "the parent must be one of your existing bookmark folders",
+      "folder_not_found": "bookmark folder not found: {Ref}",
+      "folder_ambiguous": "several bookmark folders match {Ref} — use the id instead"
+    },
+    "saved": {
+      "not_retryable": "the item is still being processed — try again once it is done or failed",
+      "no_content": "no saved text for this item (not an article, or not finished yet)"
+    },
+    "freq_invalid": "invalid repeat value: {Value} (allowed: {Allowed})",
+    "time_invalid": "invalid time: {Value} (expected RFC3339, e.g. 2026-07-02T10:00:00Z, or \"2026-07-02 10:00\")",
+    "until_without_freq": "\"until\" only makes sense together with a repeat rule",
+    "event_ambiguous": "event {UID} exists in several calendars ({Calendars}) — name the calendar (--calendar / calendar_id)",
+    "file_read_too_large": "File exceeds the 1 MiB text-reading limit. Please download it with dd-cli get.",
+    "timezone_required": "Please specify an IANA time zone with --tz (for example Europe/Berlin).",
+    "timezone_invalid": "Invalid IANA time zone: {Value}"
+  },
+  "pair": {
+    "open_link": "Open the link and confirm the device:",
+    "enter_code": "Or, on a device already signed in to DiscoDrive, enter the code manually: {Code}",
+    "waiting": "Waiting for confirmation…"
+  },
+  "ui": {
+    "usage_label": "Usage:",
+    "commands_label": "Commands:",
+    "global_flags_label": "Global flags:",
+    "examples_label": "Examples:",
+    "irreversible": "⚠️  Irreversible operation.",
+    "root": {
+      "tagline": "dd-cli — DiscoDrive terminal client.",
+      "usage_line": "  dd-cli [global flags] <command> [arguments]",
+      "more": "`dd-cli <command> --help` — details for a command."
+    },
+    "flag": {
+      "json": "  --json            machine-readable output (default: human-readable)",
+      "profile": "  --profile <name>  use a non-default profile",
+      "server": "  --server <url>    use the saved login for this server address",
+      "lang": "  --lang <code>     interface language (en/de/es/fr/ru/sr/uk)",
+      "version": "  --version         print the version and exit"
+    },
+    "unknown_command": "unknown command: {Name}",
+    "error": "error: {Msg}",
+    "no_profile": "no saved profile; run `dd-cli login` first",
+    "server_mismatch": "profile \"{Profile}\" is paired with {Have}, not {Server}; run `dd-cli login --server {Server}` to pair with that address",
+    "no_server_profile": "no saved login for {Server}; run `dd-cli login --server {Server}` first",
+    "cleartext_server": "warning: {Server} uses plain http — the device token and all data travel unencrypted; use https unless the server is on a trusted network"
+  },
+  "cmd": {
+    "books": {
+      "summary": "books: library, search, download, metadata",
+      "usage": "dd-cli books [list] [--q <s>] [--author <s>] [--series <s>] [--genre <s>] [--start <n>] | facets | get <bookID> [--out <path>] | meta <nodeID> | scan | info",
+      "long": "DiscoDrive books domain (ebooks).\n  list (default)        — library; filters are mutually exclusive (q|author|series|genre), pagination via --start\n  facets                — available filter values (authors/series/genres)\n  get <bookID> [--out]  — download a book file (bookID — the id field from the list)\n  meta <nodeID>         — show book metadata (nodeID — the nodeId field from the list)\n  scan                  — start scanning the books folder (in background)\n  info                  — show book settings\nNote: a book in the list has TWO identifiers — id (for get) and nodeId (for meta).\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli books list --q golang",
+        "1": "dd-cli books list --author \"Donald Knuth\" --start 50",
+        "2": "dd-cli books get b1 --out ./book.epub",
+        "3": "dd-cli books meta n1"
+      },
+      "msg": {
+        "need_node_id": "nodeID required: dd-cli books meta <nodeID>",
+        "unknown_verb": "unknown books sub-verb: {Verb}",
+        "shown": "Shown: {Count} (total={Total}; total is unreliable when filtering)\n",
+        "facets": "Authors: {Authors}\nSeries: {Series}\nGenres: {Genres}\n",
+        "need_book_id": "bookID required: dd-cli books get <bookID> [--out <path>]",
+        "saved": "Book saved: {Path}\n",
+        "meta": "Title: {Title}\nAuthors: {Authors}\nSeries: {Series} (#{SeriesIndex})\nLanguage: {Language}\nPublisher: {Publisher}\nDate: {Date}\nDescription: {Description}\n",
+        "scan_started": "Scan started (running in background).",
+        "scan_not_configured": "Books folder is not configured — nothing to scan.",
+        "info": "Books enabled: {Enabled}\nFolder: {Folder}\nPassword set: {HasPassword}\nAPI key set: {HasApiKey}\n"
+      },
+      "flag": {
+        "q": "full-text search",
+        "author": "filter by author",
+        "series": "filter by series",
+        "genre": "filter by genre",
+        "start": "pagination offset (page = 50 books)",
+        "out": "path to save to (default: <bookID>.bin)"
+      }
+    },
+    "cal": {
+      "summary": "calendar: events, adding, editing, calendars",
+      "usage": "dd-cli cal events [--from <t>] [--to <t>] | add --summary <s> --start <t> [flags] | show <uid> | set <uid> [flags] | rm <uid> | calendars",
+      "long": "Calendar operations (times — RFC3339, e.g. 2026-07-02T10:00:00Z; a value without a zone is read as local time).\n  events [--from <t>] [--to <t>]   — events in a time window (default: today…+7 days)\n  add --summary <s> --start <t> [--end <t>] [--location <l>] [--description <d>] [--all-day] [--repeat <daily|weekly|monthly|yearly>] [--until <t>] [--alarm <min>] [--calendar <id>] [--tz <IANA>]  — create an event\n  show <uid> [--calendar <id>]     — full details of an event\n  set <uid> [flags of add]         — change only the fields given (an empty value clears one)\n  rm <uid> [--calendar <id>]       — delete an event (⚠️ Irreversible)\n  calendars                        — list calendars\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli cal events",
+        "1": "dd-cli cal events --from 2026-07-01T00:00:00Z --to 2026-07-08T00:00:00Z",
+        "2": "dd-cli cal add --summary \"Call\" --start 2026-07-03T09:00:00Z --end 2026-07-03T09:30:00Z",
+        "3": "dd-cli cal rm e1",
+        "4": "dd-cli cal add --summary \"Vacation\" --start 2026-08-01 --end 2026-08-15 --all-day",
+        "5": "dd-cli cal set e1 --alarm 15 --location \"Zoom\""
+      },
+      "msg": {
+        "unknown_verb": "unknown cal sub-verb: {Verb}",
+        "need_summary_start": "--summary and --start are required",
+        "created": "Event created: {UID}\n",
+        "need_uid": "uid required: dd-cli cal rm <uid>",
+        "deleted": "Event deleted: {UID}\n",
+        "default_mark": " (default)",
+        "need_uid_show": "uid required: dd-cli cal show <uid>",
+        "need_uid_set": "uid required: dd-cli cal set <uid> [flags]",
+        "set_no_flags": "nothing to change: pass at least one field flag",
+        "updated": "Event updated: {UID}\n"
+      },
+      "flag": {
+        "from": "window start RFC3339 (default: now)",
+        "to": "window end RFC3339 (default: +7 days)",
+        "summary": "event title (required)",
+        "start": "start RFC3339 (required)",
+        "end": "end RFC3339 (default: +1 hour on server)",
+        "location": "location",
+        "alarm": "reminder N minutes before start (0, 5, 15, 30, 60, 1440)",
+        "calendar": "calendar id (default: the default calendar)",
+        "rm_calendar": "calendar id",
+        "description": "description / notes",
+        "all_day": "all-day event (only the date part of start/end is used)",
+        "repeat": "repeat: daily, weekly, monthly, yearly",
+        "until": "repeat until (requires --repeat)",
+        "summary_set": "event title",
+        "start_set": "start (RFC3339 or \"2026-07-02 10:00\")",
+        "end_set": "end",
+        "alarm_set": "reminder N minutes before start; \"\" removes it, \"keep\" leaves the existing reminders untouched",
+        "tz": "IANA time zone (for example Europe/Berlin; default: system zone)"
+      },
+      "field": {
+        "summary": "Title:",
+        "start": "Start:",
+        "end": "End:",
+        "all_day": "All day:",
+        "location": "Location:",
+        "description": "Description:",
+        "repeat": "Repeat:",
+        "until": "Until:",
+        "alarm": "Reminder:",
+        "calendar": "Calendar:",
+        "uid": "UID:",
+        "tz": "Time zone:"
+      }
+    },
+    "contacts": {
+      "summary": "contacts: list, show, add, delete",
+      "usage": "dd-cli contacts [list] | show <uid> | add --name <name> [flags] | rm <uid>",
+      "long": "Contact management.\n  list (default)        — list contacts\n  show <uid>            — contact details\n  add --name <name> [--email <e>] [--phone <p>] [--org <o>]  — create\n  rm <uid>             — delete (⚠️ Irreversible)\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli contacts",
+        "1": "dd-cli contacts show c1",
+        "2": "dd-cli contacts add --name \"Bob\" --email bob@x.io",
+        "3": "dd-cli contacts rm c1"
+      },
+      "msg": {
+        "need_uid_show": "uid required: dd-cli contacts show <uid>",
+        "unknown_verb": "unknown contacts sub-verb: {Verb}",
+        "need_uid_rm": "uid required: dd-cli contacts rm <uid>",
+        "org_line": "  organization: {Org}\n",
+        "email_line": "  email ({Type}): {Value}\n",
+        "phone_line": "  phone ({Type}): {Value}\n",
+        "need_name": "--name is required",
+        "created": "Contact created: {UID}\n",
+        "deleted": "Contact deleted: {UID}\n"
+      },
+      "flag": {
+        "name": "full name (required)",
+        "phone": "phone",
+        "org": "organization"
+      }
+    },
+    "tasks": {
+      "summary": "tasks: list, add, mark, delete",
+      "usage": "dd-cli tasks [list] | add --summary <s> [flags] | done <uid> | undone <uid> | rm <uid>",
+      "long": "Task management.\n  list (default)        — list tasks (incomplete first)\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>]  — create\n  done <uid>            — mark done\n  undone <uid>          — unmark\n  rm <uid>             — delete (⚠️ Irreversible)\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli tasks",
+        "1": "dd-cli tasks add --summary \"Call the doctor\" --due 2026-07-05T09:00:00Z --priority 1",
+        "2": "dd-cli tasks done t1",
+        "3": "dd-cli tasks rm t1"
+      },
+      "msg": {
+        "need_uid_rm": "uid required: dd-cli tasks rm <uid>",
+        "unknown_verb": "unknown tasks sub-verb: {Verb}",
+        "due_suffix": " due {Due}",
+        "need_summary": "--summary is required",
+        "created": "Task created: {UID}\n",
+        "need_uid": "uid is required",
+        "marked_done": "Marked done: {UID}\n",
+        "unmarked": "Unmarked: {UID}\n",
+        "deleted": "Task deleted: {UID}\n"
+      },
+      "flag": {
+        "summary": "task title (required)",
+        "due": "due date RFC3339",
+        "priority": "priority 1..9 (1 = highest; 0 = none)"
+      }
+    },
+    "music": {
+      "summary": "music: radio, podcasts, scanning",
+      "usage": "dd-cli music [radio] | list [subpath] | radio-add --name <n> --stream <url> [--home <url>] | radio-rm <id> | podcasts | podcast-add <feedURL> | podcast-rm <id> | scan | info",
+      "long": "DiscoDrive music domain.\n  radio (default)                — list radio stations\n  list [subpath]                 — contents of the music folder (artists/albums/tracks as files);\n                                  subpath descends inward, e.g. list \"Bi-2/Lunapark\"\n  radio-add --name --stream [--home]  — add a station\n  radio-rm <id>                 — delete a station (⚠️ Irreversible)\n  podcasts                      — list podcast subscriptions\n  podcast-add <feedURL>         — subscribe to a podcast by feed URL\n  podcast-rm <id>               — unsubscribe (⚠️ Irreversible)\n  scan                          — start scanning the music folder (in background)\n  info                          — show music settings\nNote: the full library (search/streaming) is via Subsonic; this is a plain file listing.\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli music list",
+        "1": "dd-cli music list \"Cosmic Gate\"",
+        "2": "dd-cli music radio-add --name \"Jazz FM\" --stream https://stream.example/jazz",
+        "3": "dd-cli music scan"
+      },
+      "msg": {
+        "need_id_radio_rm": "id required: dd-cli music radio-rm <id>",
+        "need_feed_url": "feed URL required: dd-cli music podcast-add <feedURL>",
+        "need_id_podcast_rm": "id required: dd-cli music podcast-rm <id>",
+        "unknown_verb": "unknown music sub-verb: {Verb}",
+        "need_name_stream": "--name and --stream are required",
+        "station_added": "Station added: {Name} ({ID})\n",
+        "station_removed": "Station removed: {ID}\n",
+        "podcast_added": "Subscribed: {Title} ({ID})\n",
+        "podcast_removed": "Unsubscribed: {ID}\n",
+        "scan_started": "Scan started (running in background).",
+        "scan_not_configured": "Music folder is not configured — nothing to scan.",
+        "info": "Music enabled: {Enabled}\nFolder: {Folder}\nPassword set: {HasPassword}\n"
+      },
+      "flag": {
+        "name": "station name (required)",
+        "stream": "stream URL (required)",
+        "home": "homepage (optional)"
+      }
+    },
+    "ls": {
+      "summary": "show folder contents",
+      "usage": "dd-cli ls [path]",
+      "long": "Prints folder contents by path (default: root). Directories are marked with \"/\", files show their size.\nWith --json — an array of {id,name,is_dir,size,version}.",
+      "example": {
+        "0": "dd-cli ls",
+        "1": "dd-cli ls docs",
+        "2": "dd-cli --json ls docs"
+      }
+    },
+    "get": {
+      "summary": "download a file",
+      "usage": "dd-cli get <path> [dest]",
+      "long": "Downloads a file by path. dest — local path (default: the file name in the current directory; \"-\" — stdout).",
+      "example": {
+        "0": "dd-cli get docs/a.txt",
+        "1": "dd-cli get docs/a.txt /tmp/a.txt",
+        "2": "dd-cli get docs/a.txt -"
+      },
+      "msg": {
+        "need_path": "path required: dd-cli get <path> [dest]",
+        "is_dir": "{Path} is a folder, not a file",
+        "saved": "Saved: {Path}\n"
+      }
+    },
+    "put": {
+      "summary": "upload a file",
+      "usage": "dd-cli put <local> <path>",
+      "long": "Uploads a local file to a destination folder. <path> — the destination path (folder/name). The destination folder must exist.",
+      "example": {
+        "0": "dd-cli put ./report.pdf docs/report.pdf"
+      },
+      "msg": {
+        "need_two_args": "two arguments required: dd-cli put <local> <path>",
+        "not_folder": "{Path} is not a folder",
+        "uploaded": "Uploaded: {Path}\n"
+      }
+    },
+    "mkdir": {
+      "summary": "create a folder",
+      "usage": "dd-cli mkdir <path>",
+      "long": "Creates a folder at the path. The parent folder must exist.",
+      "example": {
+        "0": "dd-cli mkdir docs/2026"
+      },
+      "msg": {
+        "need_path": "path required: dd-cli mkdir <path>",
+        "empty_name": "empty folder name",
+        "not_folder": "{Path} is not a folder",
+        "created": "Folder created: {Path}\n"
+      }
+    },
+    "mv": {
+      "summary": "move/rename a node",
+      "usage": "dd-cli mv <src> <dst>",
+      "long": "Moves or renames a file/folder. If dst is an existing folder, src is moved inside it.",
+      "example": {
+        "0": "dd-cli mv docs/a.txt docs/2026/a.txt",
+        "1": "dd-cli mv old.txt new.txt"
+      },
+      "msg": {
+        "need_two_args": "two arguments required: dd-cli mv <src> <dst>",
+        "cannot_move_root": "cannot move the root",
+        "moved_into_folder": "Moved: {Src} → {Dst}/\n",
+        "moved": "Moved: {Src} → {Dst}\n"
+      }
+    },
+    "rm": {
+      "summary": "delete a node",
+      "usage": "dd-cli rm <path>",
+      "long": "Soft-deletes a file or folder (along with its contents). Restore is via the DiscoDrive trash.",
+      "example": {
+        "0": "dd-cli rm docs/old.txt"
+      },
+      "msg": {
+        "need_path": "path required: dd-cli rm <path>",
+        "cannot_delete_root": "cannot delete the root",
+        "deleted": "Deleted: {Path}\n"
+      }
+    },
+    "share": {
+      "summary": "create a link/access to a node",
+      "usage": "dd-cli share <path> [--email <addr>] [--access view|edit] [--expires <dur>]",
+      "long": "Creates a public link (default) or grants access to a user by email.\n--expires accepts a Go duration (e.g. 24h). With --json prints {share_id,token,access}.",
+      "example": {
+        "0": "dd-cli share docs/a.txt",
+        "1": "dd-cli share docs/a.txt --expires 24h",
+        "2": "dd-cli share docs/a.txt --email bob@example.com --access edit"
+      },
+      "flag": {
+        "email": "grant access to a user by email (otherwise — public link)",
+        "access": "access level: view|edit",
+        "expires": "validity duration (e.g. 24h); 0 — unlimited"
+      },
+      "msg": {
+        "need_path": "path required: dd-cli share <path> [flags]",
+        "link": "Link: {URL} (access: {Access})\n",
+        "granted": "Access granted (share_id: {ShareID}, access: {Access})\n"
+      }
+    },
+    "login": {
+      "summary": "log in to DiscoDrive (device-code pairing)",
+      "usage": "dd-cli login --server <url> [--name <device name>] [--no-claude] [--insecure]",
+      "long": "Starts device-code pairing: prints a confirmation link and a short code,\nthen waits for confirmation on any device where you're logged in to DiscoDrive.\nPassword/TOTP is never typed into the terminal (works for passkey accounts and on headless machines too).\nAfter logging in, offers to register the dd-mcp MCP server in the Claude config (--no-claude disables this).",
+      "example": {
+        "0": "dd-cli login --server https://drive.example",
+        "1": "dd-cli login --server https://drive.example --name laptop --no-claude"
+      },
+      "flag": {
+        "server": "DiscoDrive server address (required)",
+        "name": "device name",
+        "profile": "profile name to save as",
+        "no_claude": "don't register dd-mcp in the Claude config",
+        "allow_changes": "allow changing tools in the Claude config",
+        "insecure": "skip TLS certificate verification (self-signed server); saved into the profile"
+      },
+      "msg": {
+        "need_server": "--server <url> is required",
+        "done": "Done. Profile \"{Profile}\" saved.\n",
+        "claude_setup_failed": "warning: failed to register dd-mcp in Claude",
+        "mode_readonly": "read-only",
+        "mode_changes_allowed": "changes allowed",
+        "connected": "Connected to Claude ({Mode}): {Changed}\n"
+      }
+    },
+    "logout": {
+      "summary": "log out: revoke the device on the server and forget the profile",
+      "usage": "dd-cli logout [--profile <name>] [--local-only]",
+      "long": "Breaks the pairing: revokes the current device on the server (the device-token becomes\ninvalid) and removes the profile from the local cli.json.\n  --local-only — don't contact the server, only forget the local profile\n                 (e.g. if the token was already revoked in the web UI).",
+      "example": {
+        "0": "dd-cli logout",
+        "1": "dd-cli logout --profile work",
+        "2": "dd-cli logout --local-only"
+      },
+      "flag": {
+        "local_only": "don't revoke the device on the server, only forget the profile"
+      },
+      "msg": {
+        "no_profile": "no such profile \"{Name}\"",
+        "revoke_failed": "warning: failed to revoke the device on the server",
+        "revoke_manual_hint": "revoke it manually in the DiscoDrive web UI (the \"Devices\" section).",
+        "revoked": "Device revoked on the server.",
+        "forgotten": "Profile \"{Name}\" forgotten.\n"
+      }
+    },
+    "whoami": {
+      "summary": "show the current user",
+      "usage": "dd-cli whoami",
+      "long": "Prints the current user's email, role, and id (GET /me). With --json — an object {id,email,role,tenant_id}.",
+      "example": {
+        "0": "dd-cli whoami",
+        "1": "dd-cli --json whoami"
+      },
+      "msg": {
+        "line": "{Email} (role: {Role}, id: {ID})\n"
+      }
+    },
+    "setup_claude": {
+      "summary": "register dd-mcp in Claude config(s); toggle change mode",
+      "usage": "dd-cli setup-claude [--allow-changes]",
+      "long": "Finds dd-mcp and adds it as an MCP server to existing Claude Desktop/Code configs.\n  --allow-changes — allow changing tools (delete/move, etc.)\n  no flag          — read-only mode (changing tools disabled)\nRunning again with/without the flag toggles the mode. Restart Claude after switching.",
+      "example": {
+        "0": "dd-cli setup-claude --allow-changes   # allow changes",
+        "1": "dd-cli setup-claude                    # revert to read-only"
+      },
+      "flag": {
+        "allow_changes": "allow changing tools"
+      },
+      "msg": {
+        "none_found": "No Claude configs found.",
+        "mode_readonly": "read-only",
+        "mode_changes": "changes allowed (--allow-changes)",
+        "updated": "Updated: {Path}\n",
+        "mode_line": "Mode: {Mode}. Restart Claude to apply.\n"
+      }
+    },
+    "print_config": {
+      "summary": "print a dd-mcp registration snippet for any MCP client",
+      "usage": "dd-cli print-config [--allow-changes] [--http <addr>]",
+      "long": "Prints a ready-to-paste dd-mcp registration snippet — doesn't change anything on disk.\nUnlike setup-claude (which edits Claude configs), this works for any MCP client\n(Cursor, Zed, Cline, ChatGPT connectors, etc.).\n  no flags         — stdio variant (JSON mcpServers) for local clients\n  --http <addr>    — variant for HTTP clients: the run command + URL\n  --allow-changes  — include changing tools in the printed snippet",
+      "example": {
+        "0": "dd-cli print-config                          # stdio snippet (read-only)",
+        "1": "dd-cli print-config --allow-changes          # stdio with changing tools",
+        "2": "dd-cli print-config --http 127.0.0.1:8080    # variant for ChatGPT/remote clients"
+      },
+      "flag": {
+        "allow_changes": "include changing tools in the output",
+        "http": "print the variant for HTTP clients (e.g. 127.0.0.1:8080)"
+      },
+      "msg": {
+        "http_header": "HTTP transport — for clients that work over a URL (ChatGPT connectors, remote access):\n\n",
+        "http_step1": "  1) start the server:  {Cmd}\n",
+        "http_step2": "  2) client URL:        http://{Addr}\n\n",
+        "http_creds": "Credentials come from the profile (dd-cli login) or the DISCODRIVE_SERVER/DISCODRIVE_TOKEN env\nvars on the server side — the client only needs the URL. The MCP layer has no authentication:\nkeep the port local or restrict access at the network/proxy level.\n",
+        "stdio_header": "Paste into your MCP client config (Claude Desktop/Code, Cursor, Zed, etc.):\n\n{Snippet}\n\n",
+        "stdio_creds1": "Credentials — from the profile (dd-cli login), or add to the env entry:\n",
+        "stdio_footer": "For HTTP clients (e.g. ChatGPT): dd-cli print-config --http 127.0.0.1:8080\n"
+      }
+    },
+    "rename": {
+      "summary": "rename a file/folder in place",
+      "usage": "dd-cli rename <path> <new-name>",
+      "long": "Renames a file or folder in place (keeps it in the same folder). <new-name> is a bare name, not a path — to move between folders, use `mv`.",
+      "example": {
+        "0": "dd-cli rename docs/old.txt new.txt",
+        "1": "dd-cli rename docs/2025 2026"
+      },
+      "msg": {
+        "need_args": "two arguments required: dd-cli rename <path> <new-name>",
+        "cannot_rename_root": "cannot rename the root",
+        "name_has_slash": "<new-name> must be a name, not a path (use `mv` to move): {Name}",
+        "renamed": "Renamed: {Path} → {Name}\n"
+      }
+    },
+    "bookmarks": {
+      "summary": "browser bookmarks: tree, add, edit, delete",
+      "usage": "dd-cli bookmarks [tree] | list [flags] | add <url> [flags] | mkdir <title> [flags] | edit <id> [flags] | rm <id>",
+      "long": "Browser bookmarks synced from the extension.\n  tree (default)        — the whole tree, id in the first column\n  list [--q <s>] [--folder <f>] [--folders]  — flat list with folder paths\n  add <url> [--title <s>] [--parent <f>] [--position <n>]  — new bookmark\n  mkdir <title> [--parent <f>]  — new folder\n  edit <id> [--title <s>] [--url <u>] [--parent <f>] [--position <n>]  — rename or move\n  rm <id>               — delete, a folder together with its contents (⚠️ Irreversible)\nA folder <f> is either an id or a path such as \"Toolbar/Dev\".\nOnly the flags you type are sent, so --parent \"\" is a deliberate move to the top level.\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli bookmarks",
+        "1": "dd-cli bookmarks list --q go.dev",
+        "2": "dd-cli bookmarks mkdir Dev --parent \"Bookmarks Toolbar\"",
+        "3": "dd-cli bookmarks add https://go.dev --title Go --parent \"Bookmarks Toolbar/Dev\"",
+        "4": "dd-cli bookmarks edit b7f8g9 --title \"The Go site\""
+      },
+      "flag": {
+        "q": "substring of the title, the url or the folder path",
+        "folder": "limit to this folder and everything under it: an id or a path like \"Toolbar/Dev\"",
+        "folders": "folders only",
+        "title": "title",
+        "url": "new URL",
+        "parent": "parent folder: an id or a path like \"Toolbar/Dev\"; empty = top level",
+        "parent_move": "move into this folder: an id or a path like \"Toolbar/Dev\"; pass an empty value to move to the top level",
+        "position": "position among siblings (default: after the last one)"
+      },
+      "msg": {
+        "need_id": "id is required",
+        "need_url": "url required: dd-cli bookmarks add <url>",
+        "need_title": "title required: dd-cli bookmarks mkdir <title>",
+        "nothing_to_change": "nothing to change: pass at least one of --title, --url, --parent, --position",
+        "unknown_verb": "unknown bookmarks sub-verb: {Verb}",
+        "added": "Bookmark added: {ID} {Title}\n",
+        "folder_created": "Folder created: {ID} {Title}\n",
+        "updated": "Bookmark updated: {ID} {Title}\n",
+        "deleted": "Bookmark deleted: {ID}\n"
+      }
+    },
+    "pocket": {
+      "summary": "read-later articles: list, add, read, delete",
+      "usage": "dd-cli pocket [list] [flags] | add <url> [--title <s>] | read <id> [--out <file>] | retry <id> | rm <id>",
+      "long": "Read-later articles. The server fetches and converts a page in the background,\nso a fresh item starts as pending.\n  list (default)        — newest first; --status <s> --q <s> --limit <n> --offset <n>\n  add <url> [--title <s>]  — save a page\n  read <id> [--out <file>]  — the markdown, to stdout or to a file\n  retry <id>            — fetch it again (for status error)\n  rm <id>               — delete; the markdown file already written stays (⚠️ Irreversible)\nServer-side downloads are never listed here — see dd-cli download.\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli pocket list --status error",
+        "1": "dd-cli pocket add https://example.org/article",
+        "2": "dd-cli pocket read s1 --out article.md",
+        "3": "dd-cli pocket rm s1"
+      },
+      "flag": {
+        "status": "filter by status: pending, processing, done or error",
+        "q": "substring of the title or the url",
+        "limit": "page size, 1..500 (default 50)",
+        "offset": "pagination offset",
+        "title": "title override; ignored if this url is already saved",
+        "out": "write the markdown to this file instead of stdout"
+      },
+      "msg": {
+        "need_id": "id is required",
+        "need_url": "url required: dd-cli pocket add <url>",
+        "unknown_verb": "unknown pocket sub-verb: {Verb}",
+        "saved": "Saved: {ID} ({Status})\n",
+        "written": "Written: {Path}\n",
+        "retrying": "Fetching again: {ID}\n",
+        "deleted": "Saved article deleted: {ID}\n"
+      }
+    },
+    "download": {
+      "summary": "server-side downloads: queue, progress, cancel",
+      "usage": "dd-cli download [list] | add <url> [--title <s>] [--cookie <s>] | status <id> | rm <id>",
+      "long": "Downloads that the server performs into your Downloads folder.\n  add <url> [--title <s>] [--cookie <s>]  — queue it; the transfer runs on the server\n  status <id>           — progress of one download\n  list (default)        — the downloads this machine queued\n  rm <id>               — stop it and forget the queue entry; bytes already\n                          written stay as a file (⚠️ Irreversible)\nThe server keeps no list of downloads and forgets finished ones, so list reads a\nlocal journal in downloads.json next to cli.json; ids queued elsewhere are not in it.\nWith --json output is machine-readable.",
+      "example": {
+        "0": "dd-cli download add https://example.org/ubuntu.iso",
+        "1": "dd-cli download status d1",
+        "2": "dd-cli download rm d1"
+      },
+      "flag": {
+        "title": "label for the queue entry",
+        "cookie": "Cookie header for a site behind a login"
+      },
+      "msg": {
+        "need_id": "id is required",
+        "need_url": "url required: dd-cli download add <url>",
+        "unknown_verb": "unknown download sub-verb: {Verb}",
+        "queued": "Queued: {ID} ({Status})\n",
+        "cancelled": "Download cancelled: {ID}\n",
+        "journal_empty": "No downloads queued from this machine.\n",
+        "journal_failed": "warning: could not update the local download journal: {Msg}"
+      }
+    }
+  },
+  "mcp": {
+    "err": {
+      "no_credentials": "missing credentials: set DISCODRIVE_SERVER and DISCODRIVE_TOKEN, or run `dd-mcp login --server <url>` (or `dd-cli login`)",
+      "claude_exe_path": "failed to determine the dd-mcp path"
+    },
+    "login": {
+      "flag": {
+        "server": "DiscoDrive server address (required)",
+        "name": "device name",
+        "profile": "profile name to save as",
+        "no_claude": "don't register dd-mcp in the Claude config",
+        "allow_changes": "allow changing tools in the Claude config",
+        "insecure": "skip TLS certificate verification (self-signed server); saved into the profile"
+      },
+      "err": {
+        "need_server": "--server <url> is required"
+      },
+      "msg": {
+        "done": "Done. Profile \"{Profile}\" saved. You can now run `dd-mcp`.\n",
+        "claude_path_failed": "warning: failed to determine the dd-mcp path for the Claude config: {Err}\n",
+        "claude_setup_failed": "warning: failed to register dd-mcp in Claude: {Err}\n",
+        "claude_connected": "Registered in Claude: {Changed}\n"
+      }
+    },
+    "setup_claude": {
+      "flag": {
+        "allow_changes": "allow changing tools (no flag — read-only)"
+      },
+      "msg": {
+        "none_found": "No Claude configs found.",
+        "mode_readonly": "read-only",
+        "mode_changes": "changes allowed (--allow-changes)",
+        "updated": "Updated: {Path}\n",
+        "mode_line": "Mode: {Mode}. Restart Claude to apply.\n"
+      }
+    },
+    "print_config": {
+      "flag": {
+        "allow_changes": "include changing tools in the output",
+        "http": "print the variant for HTTP clients (e.g. 127.0.0.1:8080)"
+      },
+      "msg": {
+        "http_header": "HTTP transport — for clients that work over a URL (ChatGPT connectors, remote access):\n\n",
+        "http_step1": "  1) start the server:  {Cmd}\n",
+        "http_step2": "  2) client URL:        http://{Addr}\n\n",
+        "http_creds": "Credentials come from the profile (dd-mcp login) or the DISCODRIVE_SERVER/DISCODRIVE_TOKEN env\nvars on the server side — the client only needs the URL. The MCP layer has no authentication:\nkeep the port local or restrict access at the network/proxy level.\n",
+        "stdio_header": "Paste into your MCP client config (Claude Desktop/Code, Cursor, Zed, etc.):\n\n{Snippet}\n\n",
+        "stdio_creds1": "Credentials — from the profile (dd-mcp login), or add to the env entry:\n",
+        "stdio_footer": "For HTTP clients (e.g. ChatGPT): dd-mcp print-config --http 127.0.0.1:8080\n"
+      }
+    },
+    "logout": {
+      "flag": {
+        "profile": "profile name (default: the default profile)",
+        "local_only": "don't revoke the device on the server, only forget the profile"
+      },
+      "err": {
+        "nothing_to_forget": "nothing to forget: no profile \"{Name}\" and DISCODRIVE_SERVER/DISCODRIVE_TOKEN are not set"
+      },
+      "msg": {
+        "revoke_failed": "warning: failed to revoke the device on the server: {Err}\nrevoke it manually in the DiscoDrive web UI (the \"Devices\" section).\n",
+        "revoked": "Device revoked on the server.",
+        "forgotten": "Profile \"{Name}\" forgotten.\n",
+        "env_only_nothing": "No local profile (running via env variables) — nothing to forget."
+      }
+    },
+    "http": {
+      "err": {
+        "refuse_no_token": "refusing to bind {Addr} without authentication — a non-loopback address requires --http-token (or DISCODRIVE_HTTP_TOKEN). Use 127.0.0.1 for local-only, or set a token."
+      },
+      "msg": {
+        "exposed": "dd-mcp: HTTP transport on {Addr} — EXPOSED TO THE NETWORK, bearer-token auth required. Clients must send 'Authorization: Bearer <token>'. Prefer a reverse proxy with TLS.\n",
+        "local": "dd-mcp: HTTP transport on {Addr}. The MCP layer has no authentication — keep the port local.\n",
+        "local_auth": "dd-mcp: HTTP transport on {Addr} (loopback), bearer-token auth enabled.\n"
+      }
+    },
+    "main": {
+      "flag": {
+        "allow_changes": "allow changing tools (delete files/contacts/events/tasks/radio/subscriptions, move/rename, mark tasks, update book metadata, have the server fetch URLs: save pages, downloads, radio, podcasts)",
+        "profile": "profile name (default: the default profile)",
+        "http": "start the HTTP transport on an address (e.g. 127.0.0.1:8080); default: stdio. The MCP layer has no authentication — keep the port local",
+        "http_token": "require this bearer token on the HTTP transport (Authorization: Bearer <token>); mandatory for non-loopback addresses. Fallback env: DISCODRIVE_HTTP_TOKEN",
+        "lang": "output language (en/de/es/fr/ru/sr/uk); default: from the environment"
+      }
+    }
+  },
+  "tool": {
+    "dd_files_list": {
+      "desc": "List of the contents of a DiscoDrive folder by path."
+    },
+    "dd_files_read": {
+      "desc": "Read the contents of a DiscoDrive file as text. Text only — to download a binary file intact use the local CLI: dd-cli get <dd-path>."
+    },
+    "dd_files_search": {
+      "desc": "Find files/folders by a name substring (recursively)."
+    },
+    "dd_files_upload": {
+      "desc": "Upload a text file to DiscoDrive by path. Text only: binary content passed here (images, archives, PDF) will be corrupted — upload binaries with the local CLI instead: dd-cli put <local-file> <dd-path>."
+    },
+    "dd_files_mkdir": {
+      "desc": "Create a folder in DiscoDrive by path."
+    },
+    "dd_files_delete": {
+      "desc": "Delete a DiscoDrive file/folder (not irreversible in the usual sense — goes to the trash).",
+      "msg": {
+        "cannot_delete_root": "cannot delete the root",
+        "deleted": "deleted: {Path}"
+      }
+    },
+    "dd_files_move": {
+      "desc": "Move a DiscoDrive node to another folder.",
+      "msg": {
+        "moved": "moved"
+      }
+    },
+    "dd_files_rename": {
+      "desc": "Rename a DiscoDrive node.",
+      "msg": {
+        "renamed": "renamed to {Name}"
+      }
+    },
+    "dd_contacts_list": {
+      "desc": "List of DiscoDrive contacts."
+    },
+    "dd_calendar_list": {
+      "desc": "List of DiscoDrive calendars."
+    },
+    "dd_calendar_events": {
+      "desc": "Calendar events in the window [start, end] (RFC3339, both required)."
+    },
+    "dd_calendar_create_event": {
+      "desc": "Create an event in a DiscoDrive calendar (location, description, all-day, repeat, reminder). Times must carry an explicit zone or Z."
+    },
+    "dd_tasks_list": {
+      "desc": "List of DiscoDrive tasks."
+    },
+    "dd_tasks_create": {
+      "desc": "Create a task in DiscoDrive."
+    },
+    "dd_contacts_delete": {
+      "desc": "Delete a DiscoDrive contact by uid.",
+      "msg": {
+        "deleted": "contact {UID} deleted"
+      }
+    },
+    "dd_calendar_delete_event": {
+      "desc": "Delete a calendar event by uid.",
+      "msg": {
+        "deleted": "event {UID} deleted"
+      }
+    },
+    "dd_tasks_delete": {
+      "desc": "Delete a DiscoDrive task by uid.",
+      "msg": {
+        "deleted": "task {UID} deleted"
+      }
+    },
+    "dd_tasks_set_done": {
+      "desc": "Mark a task as done/not done.",
+      "msg": {
+        "status": "task {UID}: completed={Completed}"
+      }
+    },
+    "dd_music_list": {
+      "desc": "Contents of the DiscoDrive music folder (artists/albums/tracks as files); subpath descends inward."
+    },
+    "dd_music_radio_list": {
+      "desc": "List of DiscoDrive radio stations."
+    },
+    "dd_music_podcasts_list": {
+      "desc": "List of DiscoDrive podcast subscriptions."
+    },
+    "dd_music_radio_add": {
+      "desc": "Add a radio station to DiscoDrive."
+    },
+    "dd_music_podcast_add": {
+      "desc": "Subscribe to a podcast by RSS feed URL."
+    },
+    "dd_books_list": {
+      "desc": "DiscoDrive book library with filters (q/author/series/genre, pagination via start)."
+    },
+    "dd_books_facets": {
+      "desc": "Available library filter values (authors/series/genres)."
+    },
+    "dd_books_meta": {
+      "desc": "Book metadata by node-id (the nodeId field from dd_books_list)."
+    },
+    "dd_music_radio_delete": {
+      "desc": "Delete a radio station by id.",
+      "msg": {
+        "deleted": "station {UID} deleted"
+      }
+    },
+    "dd_music_podcast_delete": {
+      "desc": "Unsubscribe from a podcast by id.",
+      "msg": {
+        "unsubscribed": "unsubscribed from podcast {UID}"
+      }
+    },
+    "dd_books_meta_update": {
+      "desc": "Update book metadata (full overwrite) by node-id.",
+      "msg": {
+        "updated": "metadata for {NodeID} updated"
+      }
+    },
+    "dd_bookmarks_list": {
+      "desc": "Browser bookmarks stored in DiscoDrive. Returns a flat list; every item carries its folder path (for example \"Toolbar/Dev\") and its parent_id. q filters by title, url or path; folder_id limits the result to one subtree; folders_only returns just the folders. Large collections are truncated — narrow the query instead of raising the limit."
+    },
+    "dd_bookmarks_add": {
+      "desc": "Create a bookmark, or a bookmark folder when is_folder is true (a folder has no url). parent_id must be the id of an existing folder from dd_bookmarks_list; leave it empty for the top level."
+    },
+    "dd_bookmarks_update": {
+      "desc": "Rename a bookmark or folder, change its url, or move it into another folder. Only the fields you pass are changed; pass the literal \"root\" as parent_id to move it to the top level. Moving a folder into its own subtree is rejected."
+    },
+    "dd_bookmarks_delete": {
+      "desc": "Delete a bookmark or folder by id. Deleting a folder also deletes everything inside it, and bookmarks have no trash — unlike files, this cannot be undone.",
+      "msg": {
+        "deleted": "bookmark {ID} deleted"
+      }
+    },
+    "dd_pocket_list": {
+      "desc": "Read-later articles saved to DiscoDrive, newest first. Filter by status (pending, processing, done or error) and by q (substring of the title or the url). Server-side downloads never appear here — poll them with dd_download_status."
+    },
+    "dd_pocket_read": {
+      "desc": "Read a saved article as markdown by its id from dd_pocket_list. Only items with status \"done\" and has_content true have a body. Long articles are truncated — page through them with offset and max_chars."
+    },
+    "dd_pocket_add": {
+      "desc": "Save a web page to read later. The server fetches and converts it in the background, so the item starts as pending — check back with dd_pocket_list. Saving a url that is already saved does nothing, except that a failed one is retried; the title of an existing item cannot be changed."
+    },
+    "dd_pocket_retry": {
+      "desc": "Fetch a saved article again by id: use it for items stuck in status \"error\", or to refresh a finished one. It fails while the item is still pending or processing."
+    },
+    "dd_pocket_delete": {
+      "desc": "Remove a saved article by id. The markdown file already written into the Downloads folder is a normal file and stays there.",
+      "msg": {
+        "deleted": "saved article {ID} deleted"
+      }
+    },
+    "dd_download_add": {
+      "desc": "Ask the server to download a URL into the Downloads folder of the storage. The transfer runs on the server, not here, and returns an id with status pending. IMPORTANT: downloads are never listed anywhere — keep the id and poll dd_download_status. Adding the same url again retries it if it failed."
+    },
+    "dd_download_status": {
+      "desc": "Progress of a server-side download, by the id returned from dd_download_add: status (pending, processing, done or error), bytes_done, size_bytes and the error text. This is the ONLY way to inspect a download — there is no list of downloads, and dd_pocket_list never shows them. Once it is done the file is in the Downloads folder, visible through dd_files_list."
+    },
+    "dd_download_cancel": {
+      "desc": "Stop a running server-side download and forget its queue entry, by id. Bytes already written stay as a file in the Downloads folder — remove it with dd_files_delete if you do not want it.",
+      "msg": {
+        "cancelled": "download {ID} cancelled"
+      }
+    },
+    "dd_calendar_get_event": {
+      "desc": "Full details of a calendar event by uid: description, all-day flag, repeat and reminder."
+    },
+    "dd_calendar_update_event": {
+      "desc": "Change an existing calendar event: only the fields given are written, an empty string clears a field.",
+      "msg": {
+        "no_fields": "nothing to change: pass at least one field"
+      }
+    }
+  }
+}
