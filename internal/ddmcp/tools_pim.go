@@ -67,11 +67,32 @@ type updateEventInput struct {
 type tasksListOutput struct {
 	Tasks []ddclient.Task `json:"tasks"`
 }
+type taskListsOutput struct {
+	Lists []ddclient.TaskList `json:"lists"`
+}
+type tasksListInput struct {
+	List string `json:"list,omitempty" jsonschema:"task list id or name; empty = tasks of all lists (optional)"`
+}
 type createTaskInput struct {
 	Summary  string `json:"summary" jsonschema:"task title"`
-	Due      string `json:"due" jsonschema:"due date RFC3339 (optional)"`
-	Priority int    `json:"priority" jsonschema:"priority 1..9 (1 = highest; 0 = none)"`
+	Due      string `json:"due,omitempty" jsonschema:"due date RFC3339 (optional)"`
+	Priority int    `json:"priority,omitempty" jsonschema:"priority 1..9 (1 = highest; 0 = none; optional)"`
+	List     string `json:"list,omitempty" jsonschema:"task list id or name; empty = the default list (optional)"`
 }
+
+// taskListID resolves a list id or name from a tool input ("" stays "": all lists /
+// the default list, and no request to /me/task-lists, so older servers keep working).
+func taskListID(ctx context.Context, c *ddclient.Client, ref string) (string, error) {
+	if ref == "" {
+		return "", nil
+	}
+	l, err := c.ResolveTaskList(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+	return l.ID, nil
+}
+
 type uidInput struct {
 	UID string `json:"uid" jsonschema:"identifier"`
 }
@@ -138,9 +159,22 @@ func pimToolSpecs() []toolSpec {
 				return nil, eventFormOutput{Event: ev}, nil
 			})
 		}},
+		{Name: "dd_tasks_lists", Description: i18n.T("tool.dd_tasks_lists.desc"), register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
+			mcp.AddTool(s, t, func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, taskListsOutput, error) {
+				lists, err := c.ListTaskLists(ctx)
+				if err != nil {
+					return nil, taskListsOutput{}, err
+				}
+				return nil, taskListsOutput{Lists: lists}, nil
+			})
+		}},
 		{Name: "dd_tasks_list", Description: i18n.T("tool.dd_tasks_list.desc"), register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
-			mcp.AddTool(s, t, func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, tasksListOutput, error) {
-				items, err := c.ListTasks(ctx)
+			mcp.AddTool(s, t, func(ctx context.Context, _ *mcp.CallToolRequest, in tasksListInput) (*mcp.CallToolResult, tasksListOutput, error) {
+				listID, err := taskListID(ctx, c, in.List)
+				if err != nil {
+					return nil, tasksListOutput{}, err
+				}
+				items, err := c.ListTasks(ctx, listID)
 				if err != nil {
 					return nil, tasksListOutput{}, err
 				}
@@ -149,7 +183,11 @@ func pimToolSpecs() []toolSpec {
 		}},
 		{Name: "dd_tasks_create", Description: i18n.T("tool.dd_tasks_create.desc"), register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
 			mcp.AddTool(s, t, func(ctx context.Context, _ *mcp.CallToolRequest, in createTaskInput) (*mcp.CallToolResult, idOutput, error) {
-				uid, err := c.CreateTask(ctx, ddclient.Task{Summary: in.Summary, Due: in.Due, Priority: in.Priority})
+				listID, err := taskListID(ctx, c, in.List)
+				if err != nil {
+					return nil, idOutput{}, err
+				}
+				uid, err := c.CreateTask(ctx, ddclient.Task{Summary: in.Summary, Due: in.Due, Priority: in.Priority, ListID: listID})
 				if err != nil {
 					return nil, idOutput{}, err
 				}

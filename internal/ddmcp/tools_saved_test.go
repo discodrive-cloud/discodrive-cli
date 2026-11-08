@@ -27,8 +27,8 @@ func TestSavedDefaultHidesChanging(t *testing.T) {
 func TestToolCountsMatchTheGate(t *testing.T) {
 	all := allToolSpecs()
 	open, gated := len(selectTools(all, false)), len(selectTools(all, true))
-	if gated != 43 || open != 22 {
-		t.Fatalf("tools: %d by default, %d under --allow-changes; want 22 and 43", open, gated)
+	if gated != 44 || open != 23 {
+		t.Fatalf("tools: %d by default, %d under --allow-changes; want 23 and 44", open, gated)
 	}
 }
 

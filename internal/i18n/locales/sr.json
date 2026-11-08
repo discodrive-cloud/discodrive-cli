@@ -193,13 +193,15 @@
     },
     "tasks": {
       "summary": "tasks: lista, dodavanje, označavanje, brisanje",
-      "usage": "dd-cli tasks [list] | add --summary <s> [flags] | done <uid> | undone <uid> | rm <uid>",
-      "long": "Upravljanje zadacima.\n  list (podrazumevano)  — lista zadataka (prvo nezavršeni)\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>]  — kreiranje\n  done <uid>             — označi kao završeno\n  undone <uid>           — poništi oznaku\n  rm <uid>              — brisanje (⚠️ Nepovratno)\nSa --json izlaz je mašinski čitljiv.",
+      "usage": "dd-cli tasks [list [--list <id|назив>]] | lists | add --summary <s> [заставице] | done <uid> | undone <uid> | rm <uid>",
+      "long": "Управљање задацима.\n  list [--list <id|назив>]  — задаци свих листа или једне (недовршени прво)\n  lists                 — листе задатака (као у Apple Подсетницима), укључујући подељене\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>] [--list <id|назив>]  — направи\n  done <uid>            — означи као урађено\n  undone <uid>          — уклони ознаку\n  rm <uid>             — обриши (⚠️ Неповратно)\nСа --json излаз је машински читљив.",
       "example": {
         "0": "dd-cli tasks",
         "1": "dd-cli tasks add --summary \"Call the doctor\" --due 2026-07-05T09:00:00Z --priority 1",
         "2": "dd-cli tasks done t1",
-        "3": "dd-cli tasks rm t1"
+        "3": "dd-cli tasks rm t1",
+        "4": "dd-cli tasks lists",
+        "5": "dd-cli tasks add --summary \"Млеко\" --list Куповина"
       },
       "msg": {
         "need_uid_rm": "potreban je uid: dd-cli tasks rm <uid>",
@@ -210,12 +212,15 @@
         "need_uid": "uid je obavezan",
         "marked_done": "Označeno kao završeno: {UID}\n",
         "unmarked": "Oznaka poništena: {UID}\n",
-        "deleted": "Zadatak obrisan: {UID}\n"
+        "deleted": "Zadatak obrisan: {UID}\n",
+        "default_list": " (подразумевана)",
+        "shared_by": " (поделио {Email})"
       },
       "flag": {
         "summary": "naslov zadatka (obavezno)",
         "due": "rok RFC3339",
-        "priority": "prioritet 1..9 (1 = najviši; 0 = bez prioriteta)"
+        "priority": "prioritet 1..9 (1 = najviši; 0 = bez prioriteta)",
+        "list": "листа задатака: id или назив"
       }
     },
     "music": {
@@ -680,11 +685,14 @@
     "dd_calendar_create_event": {
       "desc": "Kreiranje događaja u DiscoDrive kalendaru (lokacija, opis, ceo dan, ponavljanje, podsetnik). Vreme mora imati eksplicitnu zonu ili Z."
     },
+    "dd_tasks_lists": {
+      "desc": "Листе задатака (листе у Apple Подсетницима): id, назив, која је подразумевана, као и листе које су други поделили са вама (is_owner=false, owner_email)."
+    },
     "dd_tasks_list": {
-      "desc": "Lista DiscoDrive zadataka."
+      "desc": "DiscoDrive задаци. Без list — задаци свих листа, сваки са list_id; list (id или назив, види dd_tasks_lists) — само та листа."
     },
     "dd_tasks_create": {
-      "desc": "Kreiranje zadatka u DiscoDrive-u."
+      "desc": "Направи задатак у DiscoDrive-у. list (id или назив, види dd_tasks_lists) бира листу; без ње задатак иде у подразумевану листу."
     },
     "dd_contacts_delete": {
       "desc": "Brisanje DiscoDrive kontakta po uid-u.",

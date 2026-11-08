@@ -193,13 +193,15 @@
     },
     "tasks": {
       "summary": "tasks: listar, añadir, marcar, eliminar",
-      "usage": "dd-cli tasks [list] | add --summary <s> [flags] | done <uid> | undone <uid> | rm <uid>",
-      "long": "Gestión de tareas.\n  list (por defecto)    — lista las tareas (las incompletas primero)\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>]  — crea\n  done <uid>            — marca como hecha\n  undone <uid>          — desmarca\n  rm <uid>             — elimina (⚠️ Irreversible)\nCon --json la salida es legible por máquina.",
+      "usage": "dd-cli tasks [list [--list <id|nombre>]] | lists | add --summary <s> [opciones] | done <uid> | undone <uid> | rm <uid>",
+      "long": "Gestión de tareas.\n  list [--list <id|nombre>]  — tareas de todas las listas o de una (pendientes primero)\n  lists                 — listas de tareas (como en Recordatorios de Apple), incluidas las compartidas\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>] [--list <id|nombre>]  — crear\n  done <uid>            — marcar como hecha\n  undone <uid>          — desmarcar\n  rm <uid>             — eliminar (⚠️ Irreversible)\nCon --json la salida es legible por máquina.",
       "example": {
         "0": "dd-cli tasks",
         "1": "dd-cli tasks add --summary \"Call the doctor\" --due 2026-07-05T09:00:00Z --priority 1",
         "2": "dd-cli tasks done t1",
-        "3": "dd-cli tasks rm t1"
+        "3": "dd-cli tasks rm t1",
+        "4": "dd-cli tasks lists",
+        "5": "dd-cli tasks add --summary \"Leche\" --list Compras"
       },
       "msg": {
         "need_uid_rm": "se requiere uid: dd-cli tasks rm <uid>",
@@ -210,12 +212,15 @@
         "need_uid": "uid es obligatorio",
         "marked_done": "Marcada como hecha: {UID}\n",
         "unmarked": "Desmarcada: {UID}\n",
-        "deleted": "Tarea eliminada: {UID}\n"
+        "deleted": "Tarea eliminada: {UID}\n",
+        "default_list": " (predeterminada)",
+        "shared_by": " (compartida por {Email})"
       },
       "flag": {
         "summary": "título de la tarea (obligatorio)",
         "due": "fecha de vencimiento RFC3339",
-        "priority": "prioridad 1..9 (1 = la más alta; 0 = ninguna)"
+        "priority": "prioridad 1..9 (1 = la más alta; 0 = ninguna)",
+        "list": "lista de tareas: id o nombre"
       }
     },
     "music": {
@@ -680,11 +685,14 @@
     "dd_calendar_create_event": {
       "desc": "Crear un evento en un calendario de DiscoDrive (lugar, descripción, todo el día, repetición, recordatorio). Las horas deben llevar zona explícita o Z."
     },
+    "dd_tasks_lists": {
+      "desc": "Listas de tareas (listas de Recordatorios de Apple): id, nombre, cuál es la predeterminada y las listas que otros compartieron contigo (is_owner=false, owner_email)."
+    },
     "dd_tasks_list": {
-      "desc": "Lista de tareas de DiscoDrive."
+      "desc": "Tareas de DiscoDrive. Sin list — tareas de todas las listas, cada una con su list_id; list (id o nombre, ver dd_tasks_lists) — solo esa lista."
     },
     "dd_tasks_create": {
-      "desc": "Crea una tarea en DiscoDrive."
+      "desc": "Crear una tarea en DiscoDrive. list (id o nombre, ver dd_tasks_lists) elige la lista; sin ella la tarea va a la lista predeterminada."
     },
     "dd_contacts_delete": {
       "desc": "Elimina un contacto de DiscoDrive por uid.",

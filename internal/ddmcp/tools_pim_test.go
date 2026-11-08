@@ -14,7 +14,7 @@ import (
 
 func TestPimDefaultHidesChanging(t *testing.T) {
 	got := names(selectTools(append(toolSpecs(), pimToolSpecs()...), false))
-	for _, want := range []string{"dd_contacts_list", "dd_calendar_list", "dd_calendar_events", "dd_calendar_create_event", "dd_calendar_get_event", "dd_tasks_list", "dd_tasks_create"} {
+	for _, want := range []string{"dd_contacts_list", "dd_calendar_list", "dd_calendar_events", "dd_calendar_create_event", "dd_calendar_get_event", "dd_tasks_lists", "dd_tasks_list", "dd_tasks_create"} {
 		if !got[want] {
 			t.Fatalf("read/create tool %q must be available by default", want)
 		}
@@ -320,5 +320,50 @@ func TestDeleteEventCalendarID(t *testing.T) {
 		}
 	default:
 		t.Fatal("server did not receive the delete in cal2")
+	}
+}
+
+// dd_tasks_create takes a list by name and dd_tasks_list filters by it; dd_tasks_lists lists them.
+func TestTaskToolsWithLists(t *testing.T) {
+	var gotQuery, postBody string
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /auth/device/token", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"token":"jwt"}`))
+	})
+	mux.HandleFunc("GET /me/task-lists", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`[{"id":"L1","name":"Reminders","is_default":true,"is_owner":true},{"id":"L2","name":"Покупки","is_owner":true}]`))
+	})
+	mux.HandleFunc("GET /me/tasks", func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.Query().Get("list")
+		_, _ = w.Write([]byte(`[{"uid":"t1","summary":"Хлеб","list_id":"L2"}]`))
+	})
+	mux.HandleFunc("POST /me/tasks", func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		postBody = string(b)
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"uid":"t2"}`))
+	})
+	api := httptest.NewServer(mux)
+	defer api.Close()
+
+	res := callTool(t, api.URL, "dd_tasks_lists", map[string]any{})
+	if res.IsError || !strings.Contains(contentText(res), "Покупки") {
+		t.Fatalf("dd_tasks_lists: %s", contentText(res))
+	}
+	res = callTool(t, api.URL, "dd_tasks_list", map[string]any{"list": "Покупки"})
+	if res.IsError || gotQuery != "L2" || !strings.Contains(contentText(res), `"list_id":"L2"`) {
+		t.Fatalf("dd_tasks_list by list: query=%q %s", gotQuery, contentText(res))
+	}
+	res = callTool(t, api.URL, "dd_tasks_list", map[string]any{})
+	if res.IsError || gotQuery != "" {
+		t.Fatalf("dd_tasks_list of all lists: query=%q %s", gotQuery, contentText(res))
+	}
+	res = callTool(t, api.URL, "dd_tasks_create", map[string]any{"summary": "Сыр", "list": "покупки"})
+	if res.IsError || !strings.Contains(postBody, `"list_id":"L2"`) {
+		t.Fatalf("dd_tasks_create into a list: %s / %s", postBody, contentText(res))
+	}
+	res = callTool(t, api.URL, "dd_tasks_create", map[string]any{"summary": "x", "list": "Дом"})
+	if !res.IsError {
+		t.Fatalf("an unknown list must be an error: %s", contentText(res))
 	}
 }

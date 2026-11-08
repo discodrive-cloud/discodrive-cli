@@ -193,13 +193,15 @@
     },
     "tasks": {
       "summary": "задачи: список, добавить, отметить, удалить",
-      "usage": "dd-cli tasks [list] | add --summary <s> [флаги] | done <uid> | undone <uid> | rm <uid>",
-      "long": "Управление задачами.\n  list (по умолчанию)   — список задач (незавершённые первыми)\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>]  — создать\n  done <uid>            — отметить выполненной\n  undone <uid>          — снять отметку\n  rm <uid>             — удалить (⚠️ Необратимо)\nС --json вывод машиночитаемый.",
+      "usage": "dd-cli tasks [list [--list <id|название>]] | lists | add --summary <s> [флаги] | done <uid> | undone <uid> | rm <uid>",
+      "long": "Управление задачами.\n  list [--list <id|название>]  — задачи всех списков или одного (незавершённые первыми)\n  lists                 — списки задач (как в «Напоминаниях» Apple), включая общие\n  add --summary <s> [--due <RFC3339>] [--priority <1..9>] [--list <id|название>]  — создать\n  done <uid>            — отметить выполненной\n  undone <uid>          — снять отметку\n  rm <uid>             — удалить (⚠️ Необратимо)\nС --json вывод машиночитаемый.",
       "example": {
         "0": "dd-cli tasks",
         "1": "dd-cli tasks add --summary \"Позвонить врачу\" --due 2026-07-05T09:00:00Z --priority 1",
         "2": "dd-cli tasks done t1",
-        "3": "dd-cli tasks rm t1"
+        "3": "dd-cli tasks rm t1",
+        "4": "dd-cli tasks lists",
+        "5": "dd-cli tasks add --summary \"Молоко\" --list Покупки"
       },
       "msg": {
         "need_uid_rm": "нужен uid: dd-cli tasks rm <uid>",
@@ -210,12 +212,15 @@
         "need_uid": "нужен uid",
         "marked_done": "Отмечена выполненной: {UID}\n",
         "unmarked": "Снята отметка: {UID}\n",
-        "deleted": "Удалена задача: {UID}\n"
+        "deleted": "Удалена задача: {UID}\n",
+        "default_list": " (по умолчанию)",
+        "shared_by": " (общий, владелец {Email})"
       },
       "flag": {
         "summary": "название задачи (обязательно)",
         "due": "срок RFC3339",
-        "priority": "приоритет 1..9 (1 — высший; 0 — нет)"
+        "priority": "приоритет 1..9 (1 — высший; 0 — нет)",
+        "list": "список задач: id или название"
       }
     },
     "music": {
@@ -680,11 +685,14 @@
     "dd_calendar_create_event": {
       "desc": "Создать событие в календаре DiscoDrive (место, описание, весь день, повтор, напоминание). Время должно содержать явную зону или Z."
     },
+    "dd_tasks_lists": {
+      "desc": "Списки задач (списки в «Напоминаниях» Apple): id, название, какой по умолчанию, а также списки, которыми с вами поделились (is_owner=false, owner_email)."
+    },
     "dd_tasks_list": {
-      "desc": "Список задач DiscoDrive."
+      "desc": "Задачи DiscoDrive. Без list — задачи всех списков, у каждой list_id; list (id или название, см. dd_tasks_lists) — только этого списка."
     },
     "dd_tasks_create": {
-      "desc": "Создать задачу в DiscoDrive."
+      "desc": "Создать задачу в DiscoDrive. list (id или название, см. dd_tasks_lists) выбирает список; без него задача попадёт в список по умолчанию."
     },
     "dd_contacts_delete": {
       "desc": "Удалить контакт DiscoDrive по uid.",
