@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/discodrive-cloud/discodrive-cli/internal/ddclient"
 	"github.com/discodrive-cloud/discodrive-cli/internal/i18n"
@@ -135,12 +134,7 @@ func runPut(cc *cmdCtx, args []string) error {
 	if !parent.IsDir {
 		return errors.New(i18n.T("cmd.put.msg.not_folder", i18n.M{"Path": dir}))
 	}
-	// Carry the file's own date so the server does not stamp it with the upload time.
-	var modTime time.Time
-	if fi, serr := f.Stat(); serr == nil {
-		modTime = fi.ModTime()
-	}
-	node, err := c.Upload(context.Background(), parent.ID, base, f, modTime)
+	node, err := c.UploadFile(context.Background(), parent.ID, base, f)
 	if err != nil {
 		return err
 	}

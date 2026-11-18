@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -266,6 +267,20 @@ func replayableBody(r io.Reader) (func() (io.Reader, error), int64, error) {
 		return nil, 0, err
 	}
 	return func() (io.Reader, error) { return bytes.NewReader(buf), nil }, int64(len(buf)), nil
+}
+
+// UploadFile uploads an opened local file into parentID ("" = root) under name,
+// streaming it and carrying its modification time, so the server keeps the file's
+// own date rather than the upload time. A folder is refused.
+func (c *Client) UploadFile(ctx context.Context, parentID, name string, f *os.File) (Node, error) {
+	var modTime time.Time
+	if fi, err := f.Stat(); err == nil {
+		if fi.IsDir() {
+			return Node{}, errors.New(i18n.T("err.files.local_is_dir", i18n.M{"Path": f.Name()}))
+		}
+		modTime = fi.ModTime()
+	}
+	return c.Upload(ctx, parentID, name, f, modTime)
 }
 
 // Upload uploads file name into parentID ("" = root) via multipart. The body is streamed
