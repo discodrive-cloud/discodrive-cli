@@ -161,8 +161,13 @@ Déplacer et renommer en une seule commande `mv` nécessite un serveur disposant
 `PATCH /files/{id}/relocate`. Les serveurs plus anciens renvoient une erreur sans rien
 déplacer ; il n'y a pas de repli vers un déplacement partiel.
 
-MCP `dd_files_read` accepte jusqu'à 1 MiB de texte. Utilisez `dd-cli get` pour les fichiers plus volumineux.
-`dd_files_upload` nécessite `--allow-changes`, car un téléversement peut écraser un fichier.
+MCP `dd_files_read` accepte jusqu'à 1 MiB de texte. Les fichiers binaires et plus volumineux
+passent sans transiter par l'assistant : `dd_files_upload` avec `local_path` téléverse un
+fichier depuis votre disque, et `dd_files_download` enregistre un fichier DiscoDrive sur le
+disque (un fichier existant n'est remplacé qu'avec `overwrite`). Les deux nécessitent
+`--allow-changes` et ne fonctionnent qu'en connexion locale (stdio) ; via `--http`, le serveur
+ne touche jamais aux fichiers de sa propre machine. Depuis un terminal, `dd-cli put` /
+`dd-cli get` font la même chose.
 
 Pour les événements récurrents du calendrier, utilisez `--tz Europe/Berlin` (MCP : `tz`) afin de conserver
 les heures locales des réunions lors des changements d'heure. Les nouvelles séries utilisent par défaut
@@ -176,7 +181,7 @@ Le fuseau nommé d'un événement existant est conservé par le serveur.
 - **Se déconnecter.** `dd-cli logout` (ou `dd-mcp logout`) révoque l'appareil sur le serveur et l'oublie localement. Un appareil perdu peut aussi être déconnecté dans l'application web DiscoDrive, dans les Paramètres.
 - **Utilisez https.** Avec une adresse `http://` simple, le jeton et vos données transitent sans chiffrement ; `login` vous en avertit. `--insecure` ne fait qu'ignorer la vérification du certificat pour un serveur auto-signé auquel vous faites confiance.
 - **Une connexion par serveur.** `--server` choisit la connexion enregistrée pour cette adresse ; un jeton n'est jamais envoyé à un serveur qui ne l'a pas émis.
-- **Assistants IA et contenu non fiable.** Les pages web enregistrées et les fichiers partagés peuvent contenir du texte écrit pour manipuler un assistant (injection de prompt). C'est pourquoi les modifications, les téléversements et tout ce qui amène le serveur à récupérer une URL nécessitent `--allow-changes`. Ne l'activez que si vous faites confiance à ce que lit l'assistant, et vérifiez ce qu'il fait.
+- **Assistants IA et contenu non fiable.** Les pages web enregistrées et les fichiers partagés peuvent contenir du texte écrit pour manipuler un assistant (injection de prompt). C'est pourquoi les modifications, les téléversements et tout ce qui amène le serveur à récupérer une URL nécessitent `--allow-changes`. Ne l'activez que si vous faites confiance à ce que lit l'assistant, et vérifiez ce qu'il fait. Avec `--allow-changes`, l'assistant peut aussi téléverser dans DiscoDrive tout fichier local qu'il peut lire, et enregistrer des fichiers de DiscoDrive sur votre disque.
 - **Accès à distance.** `dd-mcp --http` reste sur `127.0.0.1` tant que vous ne lui donnez pas de jeton ; voir [Accès à distance](#accès-à-distance).
 
 **Signaler une vulnérabilité :** écrivez à [info@discodrive.app](mailto:info@discodrive.app) plutôt que d'ouvrir une issue publique.

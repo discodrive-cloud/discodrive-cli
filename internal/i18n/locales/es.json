@@ -20,7 +20,9 @@
     },
     "files": {
       "not_dir": "no es un directorio: {Path}",
-      "no_path": "no existe la ruta: {Path}"
+      "no_path": "no existe la ruta: {Path}",
+      "local_not_abs": "local_path debe ser una ruta absoluta en esta máquina: {Path}",
+      "local_is_dir": "{Path} es una carpeta — sube los archivos de uno en uno"
     },
     "claude": {
       "config_parse": "no se puede analizar la configuración de Claude {Path}"
@@ -39,9 +41,15 @@
     "time_invalid": "hora no válida: {Value} (se espera RFC3339, p. ej. 2026-07-02T10:00:00Z, o «2026-07-02 10:00»)",
     "until_without_freq": "«until» solo tiene sentido junto con una regla de repetición",
     "event_ambiguous": "el evento {UID} existe en varios calendarios ({Calendars}) — indica el calendario (--calendar / calendar_id)",
-    "file_read_too_large": "El archivo supera el límite de texto de 1 MiB. Descárguelo con dd-cli get.",
+    "file_read_too_large": "El archivo supera el límite de lectura de texto de 1 MiB.",
     "timezone_required": "Indique una zona horaria IANA con --tz (por ejemplo Europe/Berlin).",
-    "timezone_invalid": "Zona horaria IANA no válida: {Value}"
+    "timezone_invalid": "Zona horaria IANA no válida: {Value}",
+    "file_read_binary": "Es un archivo binario; dd_files_read devuelve solo texto.",
+    "file_hint": {
+      "download_tool": "Guárdalo en el disco con dd_files_download (path: {Path}, local_path: <ruta absoluta>) o desde una terminal: dd-cli get {Path} <archivo-local>.",
+      "cli_or_enable": "Obténlo desde una terminal: dd-cli get {Path} <archivo-local>. O pide al usuario que active dd_files_download: dd-cli setup-claude --allow-changes y luego reiniciar el asistente.",
+      "cli": "Obténlo con dd-cli en la máquina del usuario: dd-cli get {Path} <archivo-local>."
+    }
   },
   "pair": {
     "open_link": "Abre el enlace y confirma el dispositivo:",
@@ -636,6 +644,13 @@
         "http_token": "exige este bearer token en el transporte HTTP (Authorization: Bearer <token>); obligatorio para direcciones que no son de loopback. Variable de entorno alternativa: DISCODRIVE_HTTP_TOKEN",
         "lang": "idioma de salida (en/de/es/fr/ru/sr/uk); por defecto: según el entorno"
       }
+    },
+    "instructions": {
+      "intro": "DiscoDrive es la nube personal del usuario: archivos, calendarios, contactos, tareas, marcadores, música, libros y páginas guardadas. Estas herramientas actúan en ella en nombre del usuario. Las rutas de archivo van con barras desde la raíz del almacenamiento, p. ej. Downloads/app.apk.",
+      "changes_off": "Este servidor se ejecuta sin --allow-changes, así que estas herramientas están desactivadas y ausentes: subir archivos, borrar, mover y renombrar, cambiar datos existentes y todo lo que hace que el servidor descargue una URL (guardar páginas, descargas, radio, pódcasts). Eso no las hace imposibles: si el usuario pide algo así, dile que está desactivado y cómo activarlo — ejecutar `dd-cli setup-claude --allow-changes` (o añadir --allow-changes al comando dd-mcp en la configuración MCP del asistente) y reiniciar el asistente.",
+      "local_files": "Mover archivos entre esta máquina y DiscoDrive, de cualquier tipo y tamaño, incluidos binarios: dd_files_upload con local_path y dd_files_download con local_path. local_path es una ruta absoluta en esta máquina; los bytes van directamente entre el disco y el servidor, no a través de esta conversación.",
+      "cli": "Fuera de MCP, el comando dd-cli (se instala junto con dd-mcp, mismo inicio de sesión) transfiere cualquier archivo desde una terminal: `dd-cli put <archivo-local> <ruta-dd>` y `dd-cli get <ruta-dd> <archivo-local>`.",
+      "read_limit": "dd_files_read devuelve solo texto, hasta 1 MiB; para archivos binarios o más grandes usa las vías anteriores."
     }
   },
   "tool": {
@@ -643,13 +658,23 @@
       "desc": "Lista el contenido de una carpeta de DiscoDrive según la ruta."
     },
     "dd_files_read": {
-      "desc": "Leer el contenido de un archivo de DiscoDrive como texto. Solo texto — para descargar un archivo binario intacto use la CLI local: dd-cli get <ruta-dd>."
+      "desc": "Leer un archivo de DiscoDrive como texto (hasta 1 MiB). Solo texto — para archivos binarios o más grandes usa dd_files_download (si está disponible) o dd-cli get <ruta-dd> <archivo-local>.",
+      "msg": {
+        "is_dir": "{Path} es una carpeta — lístala con dd_files_list"
+      }
     },
     "dd_files_search": {
       "desc": "Busca archivos/carpetas por una subcadena del nombre (recursivamente)."
     },
     "dd_files_upload": {
-      "desc": "Subir un archivo de texto a DiscoDrive por ruta. Solo texto: el contenido binario (imágenes, archivos comprimidos, PDF) se corrompería aquí — suba los binarios con la CLI local: dd-cli put <archivo-local> <ruta-dd>."
+      "desc": "Subir un archivo a DiscoDrive. Pasa exactamente uno: content — texto, para un archivo de texto que escribes tú; local_path — ruta absoluta de un archivo en esta máquina, de cualquier tipo y tamaño, incluidos binarios (se transmite desde el disco). path es carpeta/nombre, o una carpeta existente para conservar el nombre local. Devuelve el nodo guardado con su sha256 en content_hash.",
+      "desc_remote": "Subir un archivo de texto a DiscoDrive por ruta (content es texto). Los archivos binarios (imágenes, archivos comprimidos, PDF) se dañarían aquí — súbelos con dd-cli en la máquina del usuario: dd-cli put <archivo-local> <ruta-dd>.",
+      "msg": {
+        "local_remote": "local_path no está disponible en el transporte HTTP: este servidor no puede acceder a los archivos de tu máquina. Pasa texto en content o súbelo desde la máquina del usuario: dd-cli put <archivo-local> <ruta-dd>.",
+        "need_one": "Pasa exactamente uno de: content (texto) o local_path (ruta absoluta de un archivo en esta máquina, de cualquier tipo).",
+        "need_content": "Pasa el texto a subir en content. Para archivos binarios usa dd-cli en la máquina del usuario: dd-cli put <archivo-local> <ruta-dd>.",
+        "need_name": "path necesita un nombre de archivo (carpeta/nombre), se recibió \"{Path}\""
+      }
     },
     "dd_files_mkdir": {
       "desc": "Crea una carpeta en DiscoDrive según la ruta."
@@ -812,6 +837,14 @@
       "desc": "Modificar un evento existente: solo se escriben los campos indicados, una cadena vacía borra el campo.",
       "msg": {
         "no_fields": "nada que cambiar: indica al menos un campo"
+      }
+    },
+    "dd_files_download": {
+      "desc": "Guardar un archivo de DiscoDrive en esta máquina: de cualquier tipo y tamaño, transmitido al disco. local_path es una ruta absoluta (una carpeta existente conserva el nombre del archivo); un archivo existente solo se reemplaza con overwrite: true. Devuelve el tamaño y el sha256 en content_hash.",
+      "msg": {
+        "is_dir": "{Path} es una carpeta — descarga los archivos de uno en uno (lístalos con dd_files_list)",
+        "exists": "{Path} ya existe — pasa overwrite: true para reemplazarlo, o elige otro local_path",
+        "hash_mismatch": "los bytes descargados no coinciden con el hash del servidor (sha256 {Got}, se esperaba {Want}); no se guardó nada"
       }
     }
   }

@@ -14,3 +14,8 @@ func TestMain(m *testing.M) {
 	i18n.SetActive("en")
 	os.Exit(m.Run())
 }
+
+// stdio is the options of a local (stdio) server.
+func stdio(allowChanges bool) serverOptions {
+	return serverOptions{AllowChanges: allowChanges, LocalFiles: true}
+}

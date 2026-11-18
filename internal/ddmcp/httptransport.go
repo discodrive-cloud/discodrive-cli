@@ -35,7 +35,8 @@ func RunHTTP(ctx context.Context, allowChanges bool, profile, addr, token string
 	if err != nil {
 		return err
 	}
-	mcpServer := buildServer(newClient(p), allowChanges)
+	// LocalFiles stays off: the HTTP client may be on another machine.
+	mcpServer := buildServer(newClient(p), serverOptions{AllowChanges: allowChanges})
 
 	var handler http.Handler = mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return mcpServer }, nil)
 	if token != "" {

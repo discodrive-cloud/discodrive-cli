@@ -161,8 +161,12 @@ Verschieben und Umbenennen in einem einzigen `mv`-Befehl erfordert einen Server 
 Endpunkt `PATCH /files/{id}/relocate`. Ältere Server geben einen Fehler zurück, ohne etwas
 zu verschieben; einen Rückfall auf ein teilweises Verschieben gibt es nicht.
 
-MCP `dd_files_read` akzeptiert bis zu 1 MiB Text. Verwenden Sie `dd-cli get` für größere Dateien.
-`dd_files_upload` erfordert `--allow-changes`, da ein Upload eine Datei überschreiben kann.
+MCP `dd_files_read` akzeptiert bis zu 1 MiB Text. Binäre und größere Dateien werden am
+Assistenten vorbei übertragen: `dd_files_upload` mit `local_path` lädt eine Datei von Ihrer
+Festplatte hoch, und `dd_files_download` speichert eine DiscoDrive-Datei auf die Festplatte
+(eine vorhandene Datei wird nur mit `overwrite` ersetzt). Beide erfordern `--allow-changes`
+und funktionieren nur über die lokale (stdio-)Verbindung; über `--http` berührt der Server
+keine Dateien seines eigenen Rechners. Im Terminal erledigen `dd-cli put` / `dd-cli get` dasselbe.
 
 Verwenden Sie für wiederkehrende Kalendertermine `--tz Europe/Berlin` (MCP: `tz`), damit
 lokale Besprechungszeiten über Sommer-/Winterzeitumstellungen hinweg erhalten bleiben. Neue Serien verwenden standardmäßig
@@ -176,7 +180,7 @@ Die benannte Zone eines bestehenden Termins wird vom Server beibehalten.
 - **Abmelden.** `dd-cli logout` (oder `dd-mcp logout`) widerruft das Gerät auf dem Server und vergisst es lokal. Ein verlorenes Gerät können Sie auch in der DiscoDrive-Web-App unter Einstellungen trennen.
 - **Verwenden Sie https.** Bei einer einfachen `http://`-Adresse werden das Token und Ihre Daten unverschlüsselt übertragen; `login` warnt Sie davor. `--insecure` überspringt lediglich die Zertifikatsprüfung für einen selbstsignierten Server, dem Sie vertrauen.
 - **Eine Anmeldung pro Server.** `--server` wählt die gespeicherte Anmeldung für diese Adresse; ein Token wird nie an einen Server gesendet, der es nicht ausgestellt hat.
-- **KI-Assistenten und nicht vertrauenswürdige Inhalte.** Gespeicherte Webseiten und geteilte Dateien können Text enthalten, der einen Assistenten manipulieren soll (Prompt-Injection). Deshalb erfordern Änderungen, Uploads und alles, was den Server eine URL abrufen lässt, `--allow-changes`. Aktivieren Sie es nur, wenn Sie dem vertrauen, was der Assistent liest, und prüfen Sie, was er tut.
+- **KI-Assistenten und nicht vertrauenswürdige Inhalte.** Gespeicherte Webseiten und geteilte Dateien können Text enthalten, der einen Assistenten manipulieren soll (Prompt-Injection). Deshalb erfordern Änderungen, Uploads und alles, was den Server eine URL abrufen lässt, `--allow-changes`. Aktivieren Sie es nur, wenn Sie dem vertrauen, was der Assistent liest, und prüfen Sie, was er tut. Mit `--allow-changes` kann der Assistent außerdem jede lokale Datei, die er lesen kann, nach DiscoDrive hochladen und Dateien aus DiscoDrive auf Ihre Festplatte speichern.
 - **Fernzugriff.** `dd-mcp --http` bleibt auf `127.0.0.1`, solange Sie kein Token angeben; siehe [Fernzugriff](#fernzugriff).
 
 **Eine Sicherheitslücke melden:** Bitte schreiben Sie an [info@discodrive.app](mailto:info@discodrive.app), statt ein öffentliches Issue zu eröffnen.

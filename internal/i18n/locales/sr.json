@@ -20,7 +20,9 @@
     },
     "files": {
       "not_dir": "nije direktorijum: {Path}",
-      "no_path": "ne postoji putanja: {Path}"
+      "no_path": "ne postoji putanja: {Path}",
+      "local_not_abs": "local_path mora biti apsolutna putanja na ovoj mašini: {Path}",
+      "local_is_dir": "{Path} je fascikla — otpremaj datoteke jednu po jednu"
     },
     "claude": {
       "config_parse": "Claude konfiguracija {Path} ne može da se parsira"
@@ -39,9 +41,15 @@
     "time_invalid": "nedozvoljeno vreme: {Value} (očekuje se RFC3339, npr. 2026-07-02T10:00:00Z, ili „2026-07-02 10:00“)",
     "until_without_freq": "„until“ ima smisla samo uz pravilo ponavljanja",
     "event_ambiguous": "događaj {UID} postoji u više kalendara ({Calendars}) — navedi kalendar (--calendar / calendar_id)",
-    "file_read_too_large": "Датотека премашује ограничење текста од 1 MiB. Преузмите је командом dd-cli get.",
+    "file_read_too_large": "Datoteka prelazi ograničenje čitanja teksta od 1 MiB.",
     "timezone_required": "Наведите IANA временску зону преко --tz (на пример Europe/Berlin).",
-    "timezone_invalid": "Неисправна IANA временска зона: {Value}"
+    "timezone_invalid": "Неисправна IANA временска зона: {Value}",
+    "file_read_binary": "Ovo je binarna datoteka; dd_files_read vraća samo tekst.",
+    "file_hint": {
+      "download_tool": "Sačuvaj je na disk preko dd_files_download (path: {Path}, local_path: <apsolutna putanja>) ili iz terminala: dd-cli get {Path} <lokalna-datoteka>.",
+      "cli_or_enable": "Preuzmi je iz terminala: dd-cli get {Path} <lokalna-datoteka>. Ili zamoli korisnika da uključi dd_files_download: dd-cli setup-claude --allow-changes, pa ponovo pokrenuti asistenta.",
+      "cli": "Preuzmi je preko dd-cli na korisnikovoj mašini: dd-cli get {Path} <lokalna-datoteka>."
+    }
   },
   "pair": {
     "open_link": "Otvorite vezu i potvrdite uređaj:",
@@ -636,6 +644,13 @@
         "http_token": "zahtevaj ovaj bearer token na HTTP transportu (Authorization: Bearer <token>); obavezno za adrese koje nisu loopback. Rezervna env promenljiva: DISCODRIVE_HTTP_TOKEN",
         "lang": "jezik izlaza (en/de/es/fr/ru/sr/uk); podrazumevano: iz okruženja"
       }
+    },
+    "instructions": {
+      "intro": "DiscoDrive je lični oblak korisnika: datoteke, kalendari, kontakti, zadaci, obeleživači, muzika, knjige i sačuvane stranice. Ovi alati u njemu deluju u ime korisnika. Putanje do datoteka su putanje sa kosom crtom od korena skladišta, npr. Downloads/app.apk.",
+      "changes_off": "Ovaj server radi bez --allow-changes, pa su ovi alati isključeni i nedostaju: otpremanje datoteka, brisanje, premeštanje i preimenovanje, menjanje postojećih podataka i sve što tera server da preuzme URL (čuvanje stranica, preuzimanja, radio, podkasti). To ih ne čini nemogućim: ako korisnik traži nešto od toga, reci mu da je isključeno i kako da se uključi — pokrenuti `dd-cli setup-claude --allow-changes` (ili dodati --allow-changes komandi dd-mcp u MCP konfiguraciji asistenta), pa ponovo pokrenuti asistenta.",
+      "local_files": "Prenos datoteka između ove mašine i DiscoDrive-a, bilo kog tipa i veličine, uključujući binarne: dd_files_upload sa local_path i dd_files_download sa local_path. local_path je apsolutna putanja na ovoj mašini; bajtovi idu direktno između diska i servera, ne kroz ovaj razgovor.",
+      "cli": "Van MCP-a, komanda dd-cli (instalira se zajedno sa dd-mcp, ista prijava) prenosi bilo koju datoteku iz terminala: `dd-cli put <lokalna-datoteka> <dd-putanja>` i `dd-cli get <dd-putanja> <lokalna-datoteka>`.",
+      "read_limit": "dd_files_read vraća samo tekst, do 1 MiB; za binarne ili veće datoteke koristi načine iznad."
     }
   },
   "tool": {
@@ -643,13 +658,23 @@
       "desc": "Lista sadržaja DiscoDrive fascikle po putanji."
     },
     "dd_files_read": {
-      "desc": "Прочитај садржај DiscoDrive датотеке као текст. Само текст — бинарну датотеку неоштећену преузмите локалним CLI: dd-cli get <dd-путања>."
+      "desc": "Pročitati DiscoDrive datoteku kao tekst (do 1 MiB). Samo tekst — za binarne ili veće datoteke koristi dd_files_download (ako je dostupan) ili dd-cli get <dd-putanja> <lokalna-datoteka>.",
+      "msg": {
+        "is_dir": "{Path} je fascikla — izlistaj je preko dd_files_list"
+      }
     },
     "dd_files_search": {
       "desc": "Pronalaženje datoteka/fascikli po delu naziva (rekurzivno)."
     },
     "dd_files_upload": {
-      "desc": "Отпреми текстуалну датотеку у DiscoDrive по путањи. Само текст: бинарни садржај (слике, архиве, PDF) овде би се оштетио — бинарне датотеке отпремајте локалним CLI: dd-cli put <локална-датотека> <dd-путања>."
+      "desc": "Otpremiti datoteku u DiscoDrive. Prosledi tačno jedno: content — tekst, za tekstualnu datoteku koju ti pišeš; local_path — apsolutna putanja datoteke na ovoj mašini, bilo kog tipa i veličine, uključujući binarne (strimuje se sa diska). path je fascikla/ime, ili postojeća fascikla da bi se zadržalo lokalno ime. Vraća sačuvani čvor sa sha256 u content_hash.",
+      "desc_remote": "Otpremiti tekstualnu datoteku u DiscoDrive po putanji (content je tekst). Binarne datoteke (slike, arhive, PDF) bi se ovde oštetile — otpremi ih preko dd-cli na korisnikovoj mašini: dd-cli put <lokalna-datoteka> <dd-putanja>.",
+      "msg": {
+        "local_remote": "local_path nije dostupan preko HTTP transporta: ovaj server ne može da pristupi datotekama tvoje mašine. Prosledi tekst u content ili otpremi sa korisnikove mašine: dd-cli put <lokalna-datoteka> <dd-putanja>.",
+        "need_one": "Prosledi tačno jedno od: content (tekst) ili local_path (apsolutna putanja datoteke na ovoj mašini, bilo kog tipa).",
+        "need_content": "Prosledi tekst za otpremanje u content. Za binarne datoteke koristi dd-cli na korisnikovoj mašini: dd-cli put <lokalna-datoteka> <dd-putanja>.",
+        "need_name": "path mora da sadrži ime datoteke (fascikla/ime), dobijeno \"{Path}\""
+      }
     },
     "dd_files_mkdir": {
       "desc": "Kreiranje fascikle u DiscoDrive-u po putanji."
@@ -812,6 +837,14 @@
       "desc": "Izmena postojećeg događaja: upisuju se samo prosleđena polja, prazan string briše polje.",
       "msg": {
         "no_fields": "nema šta da se menja: prosledite bar jedno polje"
+      }
+    },
+    "dd_files_download": {
+      "desc": "Sačuvati DiscoDrive datoteku na ovu mašinu: bilo kog tipa i veličine, strimovano na disk. local_path je apsolutna putanja (postojeća fascikla zadržava ime datoteke); postojeća datoteka se zamenjuje samo uz overwrite: true. Vraća veličinu i sha256 u content_hash.",
+      "msg": {
+        "is_dir": "{Path} je fascikla — preuzimaj datoteke jednu po jednu (spisak preko dd_files_list)",
+        "exists": "{Path} već postoji — prosledi overwrite: true da je zameniš, ili izaberi drugi local_path",
+        "hash_mismatch": "preuzeti bajtovi se ne poklapaju sa heš vrednošću servera (sha256 {Got}, očekivano {Want}); ništa nije sačuvano"
       }
     }
   }

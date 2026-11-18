@@ -161,8 +161,12 @@ uspešno završe. Premeštanje i preimenovanje jednom `mv` komandom zahteva serv
 atomskim `PATCH /files/{id}/relocate` endpointom. Stariji serveri vraćaju grešku bez
 premeštanja bilo čega; nema rezervnog delimičnog premeštanja.
 
-MCP `dd_files_read` prihvata do 1 MiB teksta. Za veće datoteke koristite `dd-cli get`.
-`dd_files_upload` zahteva `--allow-changes`, jer otpremanje može da prepiše datoteku.
+MCP `dd_files_read` prihvata do 1 MiB teksta. Binarne i veće datoteke prenose se mimo
+asistenta: `dd_files_upload` sa `local_path` otprema datoteku sa vašeg diska, a
+`dd_files_download` čuva DiscoDrive datoteku na disk (postojeća datoteka se zamenjuje samo uz
+`overwrite`). Oba zahtevaju `--allow-changes` i rade samo preko lokalne (stdio) veze; preko
+`--http` server nikad ne dira datoteke sopstvene mašine. Iz terminala isto rade
+`dd-cli put` / `dd-cli get`.
 
 Za ponavljajuće događaje u kalendaru koristite `--tz Europe/Berlin` (MCP: `tz`) da biste
 sačuvali lokalno vreme sastanaka pri prelasku na letnje ili zimsko računanje vremena.
@@ -176,7 +180,7 @@ je izričito. `--until` je poslednji kalendarski datum, uključujući i njega, n
 - **Odjava.** `dd-cli logout` (ili `dd-mcp logout`) opoziva uređaj na serveru i zaboravlja ga lokalno. Izgubljeni uređaj možete da isključite i u DiscoDrive veb aplikaciji, u Podešavanjima.
 - **Koristite https.** Sa običnom `http://` adresom token i vaši podaci putuju nešifrovano; `login` vas na to upozorava. `--insecure` samo preskače proveru sertifikata za samopotpisani server kojem verujete.
 - **Jedna prijava po serveru.** `--server` bira sačuvanu prijavu za tu adresu; token se nikada ne šalje serveru koji ga nije izdao.
-- **AI asistenti i nepouzdan sadržaj.** Sačuvane veb stranice i deljene datoteke mogu da sadrže tekst napisan da bi manipulisao asistentom (prompt injection). Zato izmene, otpremanja i sve što navodi server da preuzme URL zahtevaju `--allow-changes`. Uključite ga samo ako verujete onome što asistent čita, i proveravajte šta radi.
+- **AI asistenti i nepouzdan sadržaj.** Sačuvane veb stranice i deljene datoteke mogu da sadrže tekst napisan da bi manipulisao asistentom (prompt injection). Zato izmene, otpremanja i sve što navodi server da preuzme URL zahtevaju `--allow-changes`. Uključite ga samo ako verujete onome što asistent čita, i proveravajte šta radi. Uz `--allow-changes` asistent takođe može da otpremi u DiscoDrive bilo koju lokalnu datoteku koju može da pročita, i da sačuva datoteke iz DiscoDrive-a na vaš disk.
 - **Daljinski pristup.** `dd-mcp --http` ostaje na `127.0.0.1` dok mu ne date token; pogledajte [Daljinski pristup](#daljinski-pristup).
 
 **Prijava ranjivosti:** pišite na [info@discodrive.app](mailto:info@discodrive.app) umesto da otvarate javni issue.

@@ -16,7 +16,7 @@ func TestReviewNetworkAddressRequiresAuth(t *testing.T) {
 	}
 }
 func TestReviewUploadIsGated(t *testing.T) {
-	if names(selectTools(toolSpecs(), false))["dd_files_upload"] {
+	if names(selectTools(toolSpecs(stdio(true)), stdio(false)))["dd_files_upload"] {
 		t.Fatal("overwrite-capable upload exposed without allow-changes")
 	}
 }

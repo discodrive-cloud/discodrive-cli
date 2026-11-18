@@ -11,7 +11,7 @@ import (
 )
 
 func TestSavedDefaultHidesChanging(t *testing.T) {
-	got := bookmarkNames(selectTools(savedToolSpecs(), false))
+	got := bookmarkNames(selectTools(savedToolSpecs(), stdio(false)))
 	for _, want := range []string{"dd_pocket_list", "dd_pocket_read", "dd_download_status"} {
 		if !got[want] {
 			t.Fatalf("read-only tool %q must be available by default", want)
@@ -25,10 +25,19 @@ func TestSavedDefaultHidesChanging(t *testing.T) {
 }
 
 func TestToolCountsMatchTheGate(t *testing.T) {
-	all := allToolSpecs()
-	open, gated := len(selectTools(all, false)), len(selectTools(all, true))
-	if gated != 44 || open != 23 {
-		t.Fatalf("tools: %d by default, %d under --allow-changes; want 23 and 44", open, gated)
+	cases := []struct {
+		o    serverOptions
+		want int
+	}{
+		{stdio(false), 23},
+		{stdio(true), 45},                       // + dd_files_download
+		{serverOptions{}, 23},                   // HTTP
+		{serverOptions{AllowChanges: true}, 44}, // HTTP: no dd_files_download
+	}
+	for _, tc := range cases {
+		if got := len(selectTools(allToolSpecs(tc.o), tc.o)); got != tc.want {
+			t.Errorf("%+v: %d tools, want %d", tc.o, got, tc.want)
+		}
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/discodrive-cloud/discodrive-cli/internal/ddclient"
 	"github.com/discodrive-cloud/discodrive-cli/internal/i18n"
@@ -21,14 +20,21 @@ type toolSpec struct {
 	// default mode such a tool would let injected text read by the assistant send
 	// private data out through the URL.
 	Changing bool
-	register func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool)
+	// LocalOnly: reads or writes files of the machine dd-mcp runs on, so it is offered
+	// only when the client shares that machine (stdio), see serverOptions.LocalFiles.
+	LocalOnly bool
+	// InputSchema, when set, overrides the schema inferred from the input struct —
+	// for a tool whose parameters depend on the transport.
+	InputSchema func(o serverOptions) any
+	register    func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool)
 }
 
-// selectTools keeps only the allowed tools: changing ones only when allowChanges is set.
-func selectTools(specs []toolSpec, allowChanges bool) []toolSpec {
+// selectTools keeps only the allowed tools: changing ones only under --allow-changes,
+// local-file ones only when the client shares dd-mcp's machine.
+func selectTools(specs []toolSpec, o serverOptions) []toolSpec {
 	out := make([]toolSpec, 0, len(specs))
 	for _, sp := range specs {
-		if sp.Changing && !allowChanges {
+		if sp.Changing && !o.AllowChanges || sp.LocalOnly && !o.LocalFiles {
 			continue
 		}
 		out = append(out, sp)
@@ -75,10 +81,6 @@ type searchOutput struct {
 	Hits []searchHitOut `json:"hits"`
 }
 
-type uploadInput struct {
-	Path    string `json:"path" jsonschema:"destination path (folder/name)"`
-	Content string `json:"content" jsonschema:"file contents as text"`
-}
 type mkdirInput struct {
 	Path string `json:"path" jsonschema:"path of the new folder"`
 }
@@ -111,8 +113,9 @@ func splitDirBase(p string) (string, string) {
 	return p[:i], p[i+1:]
 }
 
-// toolSpecs returns the full set of file-domain tools.
-func toolSpecs() []toolSpec {
+// toolSpecs returns the full set of file-domain tools; o shapes the transfer tools'
+// parameters and the hints in their errors.
+func toolSpecs(o serverOptions) []toolSpec {
 	return []toolSpec{
 		{Name: "dd_files_list", Description: i18n.T("tool.dd_files_list.desc"), register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
 			mcp.AddTool(s, t,
@@ -139,10 +142,19 @@ func toolSpecs() []toolSpec {
 					if err != nil {
 						return nil, readOutput{}, err
 					}
+					if node.IsDir {
+						return nil, readOutput{}, errors.New(i18n.T("tool.dd_files_read.msg.is_dir", i18n.M{"Path": in.Path}))
+					}
 					var sb strings.Builder
 					w := &boundedTextWriter{dst: &sb, remaining: maxFileReadBytes}
 					if err := c.Download(ctx, node.ID, w); err != nil {
+						if errors.Is(err, errReadTooLarge) {
+							return nil, readOutput{}, errors.New(i18n.T("err.file_read_too_large") + " " + fetchHint(o, in.Path))
+						}
 						return nil, readOutput{}, err
+					}
+					if !isText(sb.String()) {
+						return nil, readOutput{}, errors.New(i18n.T("err.file_read_binary") + " " + fetchHint(o, in.Path))
 					}
 					return nil, readOutput{Path: in.Path, Content: sb.String()}, nil
 				})
@@ -165,23 +177,23 @@ func toolSpecs() []toolSpec {
 					return nil, out, nil
 				})
 		}},
-		{Name: "dd_files_upload", Changing: true, Description: i18n.T("tool.dd_files_upload.desc"), register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
-			mcp.AddTool(s, t,
-				func(ctx context.Context, _ *mcp.CallToolRequest, in uploadInput) (*mcp.CallToolResult, nodeOut, error) {
-					dir, base := splitDirBase(in.Path)
-					parent, err := c.Resolve(ctx, dir)
-					if err != nil {
-						return nil, nodeOut{}, err
-					}
-					// Content arrives inline as text, so there is no source file whose date to
-					// carry: the server dates it on arrival.
-					node, err := c.Upload(ctx, parent.ID, base, strings.NewReader(in.Content), time.Time{})
+		{Name: "dd_files_upload", Changing: true, Description: uploadDescription(o), InputSchema: uploadSchema,
+			register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
+				mcp.AddTool(s, t, func(ctx context.Context, _ *mcp.CallToolRequest, in uploadInput) (*mcp.CallToolResult, nodeOut, error) {
+					node, err := upload(ctx, c, o, in)
 					if err != nil {
 						return nil, nodeOut{}, err
 					}
 					return nil, toNodeOut(node), nil
 				})
-		}},
+			}},
+		{Name: "dd_files_download", Changing: true, LocalOnly: true, Description: i18n.T("tool.dd_files_download.desc"),
+			register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
+				mcp.AddTool(s, t, func(ctx context.Context, _ *mcp.CallToolRequest, in downloadInput) (*mcp.CallToolResult, downloadOutput, error) {
+					out, err := download(ctx, c, in)
+					return nil, out, err
+				})
+			}},
 		{Name: "dd_files_mkdir", Description: i18n.T("tool.dd_files_mkdir.desc"), register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
 			mcp.AddTool(s, t,
 				func(ctx context.Context, _ *mcp.CallToolRequest, in mkdirInput) (*mcp.CallToolResult, nodeOut, error) {
@@ -255,9 +267,13 @@ type boundedTextWriter struct {
 	remaining int
 }
 
+// errReadTooLarge is what boundedTextWriter fails with; the tool turns it into a
+// message that names the way out.
+var errReadTooLarge = errors.New("file exceeds the text-reading limit")
+
 func (w *boundedTextWriter) Write(p []byte) (int, error) {
 	if len(p) > w.remaining {
-		return 0, errors.New(i18n.T("err.file_read_too_large"))
+		return 0, errReadTooLarge
 	}
 	n, err := w.dst.Write(p)
 	w.remaining -= n

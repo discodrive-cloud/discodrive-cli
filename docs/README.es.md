@@ -161,8 +161,12 @@ Mover y renombrar en un solo comando `mv` requiere un servidor con el endpoint a
 `PATCH /files/{id}/relocate`. Los servidores más antiguos devuelven un error sin mover
 nada; no hay recurso a un movimiento parcial.
 
-MCP `dd_files_read` acepta hasta 1 MiB de texto. Usa `dd-cli get` para archivos más grandes.
-`dd_files_upload` requiere `--allow-changes`, ya que una subida puede sobrescribir un archivo.
+MCP `dd_files_read` acepta hasta 1 MiB de texto. Los archivos binarios y más grandes se
+transfieren sin pasar por el asistente: `dd_files_upload` con `local_path` sube un archivo de
+tu disco, y `dd_files_download` guarda un archivo de DiscoDrive en el disco (un archivo
+existente solo se reemplaza con `overwrite`). Ambos requieren `--allow-changes` y solo
+funcionan con la conexión local (stdio); con `--http` el servidor nunca toca archivos de su
+propia máquina. Desde una terminal, `dd-cli put` / `dd-cli get` hacen lo mismo.
 
 Para eventos de calendario recurrentes, usa `--tz Europe/Berlin` (MCP: `tz`) para conservar
 la hora local de las reuniones a través de los cambios de horario de verano. Las series nuevas usan por defecto
@@ -176,7 +180,7 @@ El servidor conserva la zona con nombre de un evento existente.
 - **Cerrar sesión.** `dd-cli logout` (o `dd-mcp logout`) revoca el dispositivo en el servidor y lo olvida localmente. Un dispositivo perdido también se puede desconectar en la app web de DiscoDrive, en Ajustes.
 - **Usa https.** Con una dirección `http://` simple, el token y tus datos viajan sin cifrar; `login` te avisa de ello. `--insecure` solo omite la comprobación del certificado para un servidor autofirmado en el que confías.
 - **Un inicio de sesión por servidor.** `--server` elige el inicio de sesión guardado para esa dirección; un token nunca se envía a un servidor que no lo haya emitido.
-- **Asistentes de IA y contenido no fiable.** Las páginas web guardadas y los archivos compartidos pueden contener texto escrito para manipular a un asistente (inyección de prompts). Por eso los cambios, las subidas y todo lo que haga que el servidor obtenga una URL requieren `--allow-changes`. Actívalo solo si confías en lo que lee el asistente, y revisa lo que hace.
+- **Asistentes de IA y contenido no fiable.** Las páginas web guardadas y los archivos compartidos pueden contener texto escrito para manipular a un asistente (inyección de prompts). Por eso los cambios, las subidas y todo lo que haga que el servidor obtenga una URL requieren `--allow-changes`. Actívalo solo si confías en lo que lee el asistente, y revisa lo que hace. Con `--allow-changes` el asistente también puede subir a DiscoDrive cualquier archivo local que pueda leer, y guardar archivos de DiscoDrive en tu disco.
 - **Acceso remoto.** `dd-mcp --http` se queda en `127.0.0.1` a menos que le des un token; consulta [Acceso remoto](#acceso-remoto).
 
 **Informar de una vulnerabilidad:** escribe a [info@discodrive.app](mailto:info@discodrive.app) en lugar de abrir un issue público.

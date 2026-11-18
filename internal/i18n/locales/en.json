@@ -20,7 +20,9 @@
     },
     "files": {
       "not_dir": "not a directory: {Path}",
-      "no_path": "no such path: {Path}"
+      "no_path": "no such path: {Path}",
+      "local_not_abs": "local_path must be an absolute path on this machine: {Path}",
+      "local_is_dir": "{Path} is a folder — upload files one at a time"
     },
     "claude": {
       "config_parse": "Claude config {Path} cannot be parsed"
@@ -39,9 +41,15 @@
     "time_invalid": "invalid time: {Value} (expected RFC3339, e.g. 2026-07-02T10:00:00Z, or \"2026-07-02 10:00\")",
     "until_without_freq": "\"until\" only makes sense together with a repeat rule",
     "event_ambiguous": "event {UID} exists in several calendars ({Calendars}) — name the calendar (--calendar / calendar_id)",
-    "file_read_too_large": "File exceeds the 1 MiB text-reading limit. Please download it with dd-cli get.",
+    "file_read_too_large": "The file exceeds the 1 MiB text-reading limit.",
     "timezone_required": "Please specify an IANA time zone with --tz (for example Europe/Berlin).",
-    "timezone_invalid": "Invalid IANA time zone: {Value}"
+    "timezone_invalid": "Invalid IANA time zone: {Value}",
+    "file_read_binary": "This is a binary file; dd_files_read returns text only.",
+    "file_hint": {
+      "download_tool": "Save it to disk with dd_files_download (path: {Path}, local_path: <absolute path>), or from a terminal: dd-cli get {Path} <local-file>.",
+      "cli_or_enable": "Get it from a terminal: dd-cli get {Path} <local-file>. Or ask the user to enable dd_files_download: dd-cli setup-claude --allow-changes, then restart the assistant.",
+      "cli": "Get it with dd-cli on the user's machine: dd-cli get {Path} <local-file>."
+    }
   },
   "pair": {
     "open_link": "Open the link and confirm the device:",
@@ -636,6 +644,13 @@
         "http_token": "require this bearer token on the HTTP transport (Authorization: Bearer <token>); mandatory for non-loopback addresses. Fallback env: DISCODRIVE_HTTP_TOKEN",
         "lang": "output language (en/de/es/fr/ru/sr/uk); default: from the environment"
       }
+    },
+    "instructions": {
+      "intro": "DiscoDrive is the user's personal cloud: files, calendars, contacts, tasks, bookmarks, music, books and saved pages. These tools act in it on the user's behalf. File paths are slash-paths from the storage root, e.g. Downloads/app.apk.",
+      "changes_off": "This server runs without --allow-changes, so these tools are switched off and absent: uploading files, deleting, moving and renaming, changing existing data, and anything that makes the server fetch a URL (saving pages, downloads, radio, podcasts). That does not make them impossible: if the user asks for one, tell them it is off and how to turn it on — run `dd-cli setup-claude --allow-changes` (or add --allow-changes to the dd-mcp command in the assistant's MCP config), then restart the assistant.",
+      "local_files": "Moving files between this machine and DiscoDrive, any type and size including binary: dd_files_upload with local_path, and dd_files_download with local_path. local_path is an absolute path on this machine; the bytes go straight between disk and server, not through this conversation.",
+      "cli": "Outside MCP, the dd-cli command (installed together with dd-mcp, same login) transfers any file from a terminal: `dd-cli put <local-file> <dd-path>` and `dd-cli get <dd-path> <local-file>`.",
+      "read_limit": "dd_files_read returns text only, up to 1 MiB; for binary or larger files use the ways above."
     }
   },
   "tool": {
@@ -643,13 +658,23 @@
       "desc": "List of the contents of a DiscoDrive folder by path."
     },
     "dd_files_read": {
-      "desc": "Read the contents of a DiscoDrive file as text. Text only — to download a binary file intact use the local CLI: dd-cli get <dd-path>."
+      "desc": "Read a DiscoDrive file as text (up to 1 MiB). Text only — for binary or larger files use dd_files_download (if available) or dd-cli get <dd-path> <local-file>.",
+      "msg": {
+        "is_dir": "{Path} is a folder — list it with dd_files_list"
+      }
     },
     "dd_files_search": {
       "desc": "Find files/folders by a name substring (recursively)."
     },
     "dd_files_upload": {
-      "desc": "Upload a text file to DiscoDrive by path. Text only: binary content passed here (images, archives, PDF) will be corrupted — upload binaries with the local CLI instead: dd-cli put <local-file> <dd-path>."
+      "desc": "Upload a file to DiscoDrive. Pass exactly one: content — text, for a text file you write; local_path — absolute path of a file on this machine, any type and size including binary (streamed from disk). path is folder/name, or an existing folder to keep the local name. Returns the stored node with its sha256 content_hash.",
+      "desc_remote": "Upload a text file to DiscoDrive by path (content is text). Binary files (images, archives, PDF) would be corrupted here — upload them with dd-cli on the user's machine: dd-cli put <local-file> <dd-path>.",
+      "msg": {
+        "local_remote": "local_path is not available over the HTTP transport: this server cannot reach files on your machine. Pass text in content, or upload from the user's machine: dd-cli put <local-file> <dd-path>.",
+        "need_one": "Pass exactly one of: content (text) or local_path (absolute path of a file on this machine, any type).",
+        "need_content": "Pass the text to upload in content. For binary files use dd-cli on the user's machine: dd-cli put <local-file> <dd-path>.",
+        "need_name": "path needs a file name (folder/name), got \"{Path}\""
+      }
     },
     "dd_files_mkdir": {
       "desc": "Create a folder in DiscoDrive by path."
@@ -812,6 +837,14 @@
       "desc": "Change an existing calendar event: only the fields given are written, an empty string clears a field.",
       "msg": {
         "no_fields": "nothing to change: pass at least one field"
+      }
+    },
+    "dd_files_download": {
+      "desc": "Save a DiscoDrive file to this machine: any type and size, streamed to disk. local_path is an absolute path (an existing folder keeps the file's name); an existing file is replaced only with overwrite: true. Returns size and sha256 content_hash.",
+      "msg": {
+        "is_dir": "{Path} is a folder — download files one at a time (list them with dd_files_list)",
+        "exists": "{Path} already exists — pass overwrite: true to replace it, or choose another local_path",
+        "hash_mismatch": "the downloaded bytes do not match the server's hash (sha256 {Got}, expected {Want}); nothing was saved"
       }
     }
   }

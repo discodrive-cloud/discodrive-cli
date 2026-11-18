@@ -20,7 +20,9 @@
     },
     "files": {
       "not_dir": "ce n'est pas un répertoire : {Path}",
-      "no_path": "chemin introuvable : {Path}"
+      "no_path": "chemin introuvable : {Path}",
+      "local_not_abs": "local_path doit être un chemin absolu sur cette machine : {Path}",
+      "local_is_dir": "{Path} est un dossier — téléversez les fichiers un par un"
     },
     "claude": {
       "config_parse": "impossible d'analyser la configuration Claude {Path}"
@@ -39,9 +41,15 @@
     "time_invalid": "heure invalide : {Value} (attendu RFC3339, p. ex. 2026-07-02T10:00:00Z, ou « 2026-07-02 10:00 »)",
     "until_without_freq": "« until » n'a de sens qu'avec une règle de répétition",
     "event_ambiguous": "l'événement {UID} existe dans plusieurs calendriers ({Calendars}) — indiquez le calendrier (--calendar / calendar_id)",
-    "file_read_too_large": "Le fichier dépasse la limite de texte de 1 Mio. Téléchargez-le avec dd-cli get.",
+    "file_read_too_large": "Le fichier dépasse la limite de lecture de texte de 1 Mio.",
     "timezone_required": "Veuillez préciser un fuseau IANA avec --tz (par exemple Europe/Berlin).",
-    "timezone_invalid": "Fuseau horaire IANA non valide : {Value}"
+    "timezone_invalid": "Fuseau horaire IANA non valide : {Value}",
+    "file_read_binary": "C'est un fichier binaire ; dd_files_read ne renvoie que du texte.",
+    "file_hint": {
+      "download_tool": "Enregistre-le sur le disque avec dd_files_download (path : {Path}, local_path : <chemin absolu>), ou depuis un terminal : dd-cli get {Path} <fichier-local>.",
+      "cli_or_enable": "Récupère-le depuis un terminal : dd-cli get {Path} <fichier-local>. Ou demande à l'utilisateur d'activer dd_files_download : dd-cli setup-claude --allow-changes, puis redémarrer l'assistant.",
+      "cli": "Récupère-le avec dd-cli sur la machine de l'utilisateur : dd-cli get {Path} <fichier-local>."
+    }
   },
   "pair": {
     "open_link": "Ouvrez le lien et confirmez l'appareil :",
@@ -636,6 +644,13 @@
         "http_token": "exiger ce bearer token sur le transport HTTP (Authorization: Bearer <token>) ; obligatoire pour les adresses non-loopback. Variable d'environnement de repli : DISCODRIVE_HTTP_TOKEN",
         "lang": "langue de sortie (en/de/es/fr/ru/sr/uk) ; par défaut : depuis l'environnement"
       }
+    },
+    "instructions": {
+      "intro": "DiscoDrive est le cloud personnel de l'utilisateur : fichiers, calendriers, contacts, tâches, favoris, musique, livres et pages enregistrées. Ces outils y agissent au nom de l'utilisateur. Les chemins de fichiers sont des chemins à barres obliques depuis la racine du stockage, p. ex. Downloads/app.apk.",
+      "changes_off": "Ce serveur tourne sans --allow-changes, donc ces outils sont désactivés et absents : téléverser des fichiers, supprimer, déplacer et renommer, modifier des données existantes, et tout ce qui fait récupérer une URL au serveur (enregistrer des pages, téléchargements, radio, podcasts). Ils ne sont pas impossibles pour autant : si l'utilisateur en demande un, dis-lui que c'est désactivé et comment l'activer — lancer `dd-cli setup-claude --allow-changes` (ou ajouter --allow-changes à la commande dd-mcp dans la configuration MCP de l'assistant), puis redémarrer l'assistant.",
+      "local_files": "Transférer des fichiers entre cette machine et DiscoDrive, de tout type et toute taille, binaires compris : dd_files_upload avec local_path, et dd_files_download avec local_path. local_path est un chemin absolu sur cette machine ; les octets vont directement entre le disque et le serveur, sans passer par cette conversation.",
+      "cli": "Hors MCP, la commande dd-cli (installée avec dd-mcp, même connexion) transfère n'importe quel fichier depuis un terminal : `dd-cli put <fichier-local> <chemin-dd>` et `dd-cli get <chemin-dd> <fichier-local>`.",
+      "read_limit": "dd_files_read ne renvoie que du texte, jusqu'à 1 Mio ; pour les fichiers binaires ou plus gros, utiliser les moyens ci-dessus."
     }
   },
   "tool": {
@@ -643,13 +658,23 @@
       "desc": "Liste du contenu d'un dossier DiscoDrive par chemin."
     },
     "dd_files_read": {
-      "desc": "Lire le contenu d'un fichier DiscoDrive sous forme de texte. Texte uniquement — pour télécharger un fichier binaire intact, utilisez la CLI locale : dd-cli get <chemin-dd>."
+      "desc": "Lire un fichier DiscoDrive comme texte (jusqu'à 1 Mio). Texte uniquement — pour les fichiers binaires ou plus gros, utiliser dd_files_download (si disponible) ou dd-cli get <chemin-dd> <fichier-local>.",
+      "msg": {
+        "is_dir": "{Path} est un dossier — liste-le avec dd_files_list"
+      }
     },
     "dd_files_search": {
       "desc": "Rechercher des fichiers/dossiers par une sous-chaîne du nom (récursivement)."
     },
     "dd_files_upload": {
-      "desc": "Téléverser un fichier texte vers DiscoDrive par chemin. Texte uniquement : un contenu binaire (images, archives, PDF) serait corrompu ici — téléversez les binaires avec la CLI locale : dd-cli put <fichier-local> <chemin-dd>."
+      "desc": "Téléverser un fichier dans DiscoDrive. Passer exactement l'un des deux : content — du texte, pour un fichier texte que tu écris ; local_path — chemin absolu d'un fichier sur cette machine, de tout type et toute taille, binaires compris (lu en flux depuis le disque). path est dossier/nom, ou un dossier existant pour garder le nom local. Renvoie le nœud enregistré avec son sha256 dans content_hash.",
+      "desc_remote": "Téléverser un fichier texte dans DiscoDrive par chemin (content est du texte). Les fichiers binaires (images, archives, PDF) seraient corrompus ici — téléverse-les avec dd-cli sur la machine de l'utilisateur : dd-cli put <fichier-local> <chemin-dd>.",
+      "msg": {
+        "local_remote": "local_path n'est pas disponible sur le transport HTTP : ce serveur ne peut pas accéder aux fichiers de ta machine. Passe du texte dans content, ou téléverse depuis la machine de l'utilisateur : dd-cli put <fichier-local> <chemin-dd>.",
+        "need_one": "Passer exactement l'un de : content (texte) ou local_path (chemin absolu d'un fichier sur cette machine, de tout type).",
+        "need_content": "Passer le texte à téléverser dans content. Pour les fichiers binaires, utiliser dd-cli sur la machine de l'utilisateur : dd-cli put <fichier-local> <chemin-dd>.",
+        "need_name": "path doit contenir un nom de fichier (dossier/nom), reçu « {Path} »"
+      }
     },
     "dd_files_mkdir": {
       "desc": "Créer un dossier dans DiscoDrive par chemin."
@@ -812,6 +837,14 @@
       "desc": "Modifier un événement existant : seuls les champs fournis sont écrits, une chaîne vide efface un champ.",
       "msg": {
         "no_fields": "rien à modifier : fournissez au moins un champ"
+      }
+    },
+    "dd_files_download": {
+      "desc": "Enregistrer un fichier DiscoDrive sur cette machine : de tout type et toute taille, écrit en flux sur le disque. local_path est un chemin absolu (un dossier existant garde le nom du fichier) ; un fichier existant n'est remplacé qu'avec overwrite: true. Renvoie la taille et le sha256 dans content_hash.",
+      "msg": {
+        "is_dir": "{Path} est un dossier — téléchargez les fichiers un par un (liste avec dd_files_list)",
+        "exists": "{Path} existe déjà — passer overwrite: true pour le remplacer, ou choisir un autre local_path",
+        "hash_mismatch": "les octets téléchargés ne correspondent pas au hash du serveur (sha256 {Got}, attendu {Want}) ; rien n'a été enregistré"
       }
     }
   }

@@ -13,7 +13,7 @@ import (
 )
 
 func TestPimDefaultHidesChanging(t *testing.T) {
-	got := names(selectTools(append(toolSpecs(), pimToolSpecs()...), false))
+	got := names(selectTools(append(toolSpecs(stdio(true)), pimToolSpecs()...), stdio(false)))
 	for _, want := range []string{"dd_contacts_list", "dd_calendar_list", "dd_calendar_events", "dd_calendar_create_event", "dd_calendar_get_event", "dd_tasks_lists", "dd_tasks_list", "dd_tasks_create"} {
 		if !got[want] {
 			t.Fatalf("read/create tool %q must be available by default", want)
@@ -27,7 +27,7 @@ func TestPimDefaultHidesChanging(t *testing.T) {
 }
 
 func TestPimAllowChangesExposesAll(t *testing.T) {
-	got := names(selectTools(append(toolSpecs(), pimToolSpecs()...), true))
+	got := names(selectTools(append(toolSpecs(stdio(true)), pimToolSpecs()...), stdio(true)))
 	for _, want := range []string{"dd_contacts_delete", "dd_calendar_delete_event", "dd_calendar_update_event", "dd_tasks_delete", "dd_tasks_set_done"} {
 		if !got[want] {
 			t.Fatalf("mutating tool %q must be available under --allow-changes", want)
@@ -46,7 +46,9 @@ func callToolAllow(t *testing.T, apiURL, name string, args map[string]any, allow
 	t.Helper()
 	c := ddclient.New(apiURL, "tok")
 	httpServer := httptest.NewServer(mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return buildServer(c, allowChanges) }, nil))
+		func(*http.Request) *mcp.Server {
+			return buildServer(c, serverOptions{AllowChanges: allowChanges, LocalFiles: true})
+		}, nil))
 	defer httpServer.Close()
 
 	ctx := t.Context()

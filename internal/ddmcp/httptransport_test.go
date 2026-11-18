@@ -17,7 +17,7 @@ import (
 func TestHTTPTransportServesToolsAndFilters(t *testing.T) {
 	c := ddclient.New("http://example.invalid", "tok") // the API is not hit for tools/list
 	httpServer := httptest.NewServer(mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return buildServer(c, false) }, nil))
+		func(*http.Request) *mcp.Server { return buildServer(c, serverOptions{}) }, nil))
 	defer httpServer.Close()
 
 	ctx := context.Background()

@@ -161,8 +161,12 @@ Moving and renaming in one `mv` command requires a server with the atomic
 `PATCH /files/{id}/relocate` endpoint. Older servers return an error without moving
 anything; there is no fallback to a partial move.
 
-MCP `dd_files_read` accepts up to 1 MiB of text. Use `dd-cli get` for larger files.
-`dd_files_upload` requires `--allow-changes`, since uploading can overwrite a file.
+MCP `dd_files_read` accepts up to 1 MiB of text. Binary and larger files move without passing
+through the assistant: `dd_files_upload` with `local_path` uploads a file from your disk, and
+`dd_files_download` saves a DiscoDrive file to disk (an existing file is replaced only with
+`overwrite`). Both require `--allow-changes` and work only over the local (stdio) connection;
+over `--http` the server never touches files on its own machine. `dd-cli put` / `dd-cli get`
+do the same from a terminal.
 
 For recurring calendar events, use `--tz Europe/Berlin` (MCP: `tz`) to preserve
 local meeting times across daylight-saving changes. New series default to the
@@ -176,7 +180,7 @@ An existing event's named zone is preserved by the server.
 - **Signing out.** `dd-cli logout` (or `dd-mcp logout`) revokes the device on the server and forgets it locally. A lost device can also be disconnected in the DiscoDrive web app, under Settings.
 - **Use https.** With a plain `http://` address the token and your data travel unencrypted; `login` warns you about it. `--insecure` only skips certificate checks for a self-signed server you trust.
 - **One login per server.** `--server` picks the saved login for that address; a token is never sent to a server it was not issued by.
-- **AI assistants and untrusted content.** Saved web pages and shared files can contain text written to manipulate an assistant (prompt injection). That is why changes, uploads and anything that makes the server fetch a URL require `--allow-changes`. Enable it only if you trust what the assistant reads, and review what it does.
+- **AI assistants and untrusted content.** Saved web pages and shared files can contain text written to manipulate an assistant (prompt injection). That is why changes, uploads and anything that makes the server fetch a URL require `--allow-changes`. Enable it only if you trust what the assistant reads, and review what it does. With `--allow-changes` the assistant can also upload to DiscoDrive any local file it can read, and save files from DiscoDrive to your disk.
 - **Remote access.** `dd-mcp --http` stays on `127.0.0.1` unless you give it a token; see [Remote access](#remote-access).
 
 **Reporting a vulnerability:** please write to [info@discodrive.app](mailto:info@discodrive.app) instead of opening a public issue.
