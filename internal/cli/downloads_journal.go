@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/discodrive-cloud/discodrive-cli/internal/atomicfile"
 	"github.com/discodrive-cloud/discodrive-cli/internal/ddclient"
 )
 
@@ -103,7 +104,7 @@ func saveDownloads(cc *cmdCtx, items []downloadEntry) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	return writeFileAtomicMode(path, 0o600, func(w io.Writer) error {
+	return atomicfile.WriteMode(path, 0o600, func(w io.Writer) error {
 		_, err := w.Write(append(b, '\n'))
 		return err
 	})

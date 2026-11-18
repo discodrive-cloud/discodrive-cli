@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/discodrive-cloud/discodrive-cli/internal/atomicfile"
 	"github.com/discodrive-cloud/discodrive-cli/internal/ddclient"
 	"github.com/discodrive-cloud/discodrive-cli/internal/i18n"
 )
@@ -129,7 +130,7 @@ func booksGet(cc *cmdCtx, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := writeFileAtomic(dst, func(w io.Writer) error {
+	if err := atomicfile.Write(dst, func(w io.Writer) error {
 		return c.DownloadBook(context.Background(), bookID, w)
 	}); err != nil {
 		return err

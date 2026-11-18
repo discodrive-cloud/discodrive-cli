@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/discodrive-cloud/discodrive-cli/internal/atomicfile"
 	"github.com/discodrive-cloud/discodrive-cli/internal/ddclient"
 	"github.com/discodrive-cloud/discodrive-cli/internal/i18n"
 )
@@ -115,7 +116,7 @@ func pocketRead(cc *cmdCtx, args []string) error {
 	if *out == "" || *out == "-" {
 		return c.SavedContent(context.Background(), pos[0], cc.Stdout)
 	}
-	if err := writeFileAtomic(*out, func(w io.Writer) error {
+	if err := atomicfile.Write(*out, func(w io.Writer) error {
 		return c.SavedContent(context.Background(), pos[0], w)
 	}); err != nil {
 		return err

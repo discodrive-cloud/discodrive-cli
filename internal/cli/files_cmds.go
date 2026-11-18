@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/discodrive-cloud/discodrive-cli/internal/atomicfile"
 	"github.com/discodrive-cloud/discodrive-cli/internal/ddclient"
 	"github.com/discodrive-cloud/discodrive-cli/internal/i18n"
 )
@@ -101,7 +102,7 @@ func runGet(cc *cmdCtx, args []string) error {
 	if dest == "-" {
 		return c.Download(context.Background(), node.ID, cc.contentOut())
 	}
-	if err := writeFileAtomic(dest, func(w io.Writer) error {
+	if err := atomicfile.Write(dest, func(w io.Writer) error {
 		return c.Download(context.Background(), node.ID, w)
 	}); err != nil {
 		return err
