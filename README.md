@@ -166,7 +166,8 @@ through the assistant: `dd_files_upload` with `local_path` uploads a file from y
 `dd_files_download` saves a DiscoDrive file to disk (an existing file is replaced only with
 `overwrite`). Both require `--allow-changes` and work only over the local (stdio) connection;
 over `--http` the server never touches files on its own machine. `dd-cli put` / `dd-cli get`
-do the same from a terminal.
+do the same from a terminal. `dd_files_upload` replaces a file of the same name in DiscoDrive
+without asking — one more reason it requires `--allow-changes`.
 
 For recurring calendar events, use `--tz Europe/Berlin` (MCP: `tz`) to preserve
 local meeting times across daylight-saving changes. New series default to the

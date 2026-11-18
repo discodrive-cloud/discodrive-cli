@@ -25,7 +25,7 @@ type toolSpec struct {
 	LocalOnly bool
 	// InputSchema, when set, overrides the schema inferred from the input struct —
 	// for a tool whose parameters depend on the transport.
-	InputSchema func(o serverOptions) any
+	InputSchema any
 	register    func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool)
 }
 
@@ -34,10 +34,9 @@ type toolSpec struct {
 func selectTools(specs []toolSpec, o serverOptions) []toolSpec {
 	out := make([]toolSpec, 0, len(specs))
 	for _, sp := range specs {
-		if sp.Changing && !o.AllowChanges || sp.LocalOnly && !o.LocalFiles {
-			continue
+		if o.offers(sp) {
+			out = append(out, sp)
 		}
-		out = append(out, sp)
 	}
 	return out
 }
@@ -177,7 +176,7 @@ func toolSpecs(o serverOptions) []toolSpec {
 					return nil, out, nil
 				})
 		}},
-		{Name: "dd_files_upload", Changing: true, Description: uploadDescription(o), InputSchema: uploadSchema,
+		{Name: "dd_files_upload", Changing: true, Description: uploadDescription(o), InputSchema: uploadSchema(o),
 			register: func(s *mcp.Server, c *ddclient.Client, t *mcp.Tool) {
 				mcp.AddTool(s, t, func(ctx context.Context, _ *mcp.CallToolRequest, in uploadInput) (*mcp.CallToolResult, nodeOut, error) {
 					node, err := upload(ctx, c, o, in)

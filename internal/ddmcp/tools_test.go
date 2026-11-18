@@ -14,7 +14,7 @@ func names(specs []toolSpec) map[string]bool {
 }
 
 func TestDefaultModeHidesChangingTools(t *testing.T) {
-	got := names(selectTools(toolSpecs(stdio(true)), stdio(false)))
+	got := names(selectTools(toolSpecs(stdioOptions(true)), stdioOptions(false)))
 	for _, want := range []string{"dd_files_list", "dd_files_read", "dd_files_search", "dd_files_mkdir"} {
 		if !got[want] {
 			t.Fatalf("read/create tool %q must be present by default", want)
@@ -28,7 +28,7 @@ func TestDefaultModeHidesChangingTools(t *testing.T) {
 }
 
 func TestAllowChangesExposesAll(t *testing.T) {
-	got := names(selectTools(toolSpecs(stdio(true)), stdio(true)))
+	got := names(selectTools(toolSpecs(stdioOptions(true)), stdioOptions(true)))
 	for _, want := range []string{"dd_files_delete", "dd_files_move", "dd_files_rename", "dd_files_upload"} {
 		if !got[want] {
 			t.Fatalf("changing tool %q must appear under --allow-changes", want)
@@ -40,7 +40,7 @@ func TestAllowChangesExposesAll(t *testing.T) {
 // and dd_files_delete carries the trash-bin caveat (which must reach the LLM).
 func TestToolDescriptionsAreSourceOfTruth(t *testing.T) {
 	var deleteSeen bool
-	for _, sp := range toolSpecs(stdio(true)) {
+	for _, sp := range toolSpecs(stdioOptions(true)) {
 		if sp.Description == "" {
 			t.Fatalf("tool %s has no Description", sp.Name)
 		}

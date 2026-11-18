@@ -166,7 +166,8 @@ asistenta: `dd_files_upload` sa `local_path` otprema datoteku sa vašeg diska, a
 `dd_files_download` čuva DiscoDrive datoteku na disk (postojeća datoteka se zamenjuje samo uz
 `overwrite`). Oba zahtevaju `--allow-changes` i rade samo preko lokalne (stdio) veze; preko
 `--http` server nikad ne dira datoteke sopstvene mašine. Iz terminala isto rade
-`dd-cli put` / `dd-cli get`.
+`dd-cli put` / `dd-cli get`. `dd_files_upload` bez pitanja zamenjuje istoimenu datoteku u
+DiscoDrive-u — još jedan razlog zašto zahteva `--allow-changes`.
 
 Za ponavljajuće događaje u kalendaru koristite `--tz Europe/Berlin` (MCP: `tz`) da biste
 sačuvali lokalno vreme sastanaka pri prelasku na letnje ili zimsko računanje vremena.

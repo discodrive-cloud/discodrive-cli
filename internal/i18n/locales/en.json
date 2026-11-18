@@ -22,7 +22,8 @@
       "not_dir": "not a directory: {Path}",
       "no_path": "no such path: {Path}",
       "local_not_abs": "local_path must be an absolute path on this machine: {Path}",
-      "local_is_dir": "{Path} is a folder — upload files one at a time"
+      "local_is_dir": "{Path} is a folder — upload files one at a time",
+      "local_read": "cannot read local_path {Path}: {Err}. It must be an existing file on this machine that dd-mcp may read — check the path, or ask the user for access."
     },
     "claude": {
       "config_parse": "Claude config {Path} cannot be parsed"
@@ -44,11 +45,11 @@
     "file_read_too_large": "The file exceeds the 1 MiB text-reading limit.",
     "timezone_required": "Please specify an IANA time zone with --tz (for example Europe/Berlin).",
     "timezone_invalid": "Invalid IANA time zone: {Value}",
-    "file_read_binary": "This is a binary file; dd_files_read returns text only.",
+    "file_read_binary": "This file is not UTF-8 text (binary, or text in another encoding); dd_files_read returns UTF-8 text only.",
     "file_hint": {
       "download_tool": "Save it to disk with dd_files_download (path: {Path}, local_path: <absolute path>), or from a terminal: dd-cli get {Path} <local-file>.",
       "cli_or_enable": "Get it from a terminal: dd-cli get {Path} <local-file>. Or ask the user to enable dd_files_download: dd-cli setup-claude --allow-changes, then restart the assistant.",
-      "cli": "Get it with dd-cli on the user's machine: dd-cli get {Path} <local-file>."
+      "cli": "If the user has dd-cli on their machine, it gets the file intact: dd-cli get {Path} <local-file>."
     }
   },
   "pair": {
@@ -647,10 +648,12 @@
     },
     "instructions": {
       "intro": "DiscoDrive is the user's personal cloud: files, calendars, contacts, tasks, bookmarks, music, books and saved pages. These tools act in it on the user's behalf. File paths are slash-paths from the storage root, e.g. Downloads/app.apk.",
-      "changes_off": "This server runs without --allow-changes, so these tools are switched off and absent: uploading files, deleting, moving and renaming, changing existing data, and anything that makes the server fetch a URL (saving pages, downloads, radio, podcasts). That does not make them impossible: if the user asks for one, tell them it is off and how to turn it on — run `dd-cli setup-claude --allow-changes` (or add --allow-changes to the dd-mcp command in the assistant's MCP config), then restart the assistant.",
+      "changes_off": "This server runs without --allow-changes, so these tools are switched off and absent: uploading files, deleting, moving and renaming, changing existing data, and anything that makes the server fetch a URL (saving pages, downloads, radio, podcasts). Turning it on also lets dd_files_upload/dd_files_download move any file between this machine and DiscoDrive (local_path). That does not make them impossible: if the user asks for one, tell them it is off and how to turn it on — run `dd-cli setup-claude --allow-changes` (or add --allow-changes to the dd-mcp command in the assistant's MCP config), then restart the assistant.",
       "local_files": "Moving files between this machine and DiscoDrive, any type and size including binary: dd_files_upload with local_path, and dd_files_download with local_path. local_path is an absolute path on this machine; the bytes go straight between disk and server, not through this conversation.",
       "cli": "Outside MCP, the dd-cli command (installed together with dd-mcp, same login) transfers any file from a terminal: `dd-cli put <local-file> <dd-path>` and `dd-cli get <dd-path> <local-file>`.",
-      "read_limit": "dd_files_read returns text only, up to 1 MiB; for binary or larger files use the ways above."
+      "read_limit": "dd_files_read returns text only, up to 1 MiB; for binary or larger files use the ways above.",
+      "changes_off_remote": "This server runs without --allow-changes, so these tools are switched off and absent: uploading files, deleting, moving and renaming, changing existing data, and anything that makes the server fetch a URL (saving pages, downloads, radio, podcasts). That does not make them impossible: if the user asks for one, tell them it is off — whoever runs this server (dd-mcp --http) has to restart it with --allow-changes; settings on the user's side do not change it.",
+      "cli_remote": "This server is reached over HTTP and cannot touch files on the user's machine. If the user has the dd-cli command there, it transfers any file from a terminal: `dd-cli put <local-file> <dd-path>` and `dd-cli get <dd-path> <local-file>`."
     }
   },
   "tool": {
@@ -668,11 +671,11 @@
     },
     "dd_files_upload": {
       "desc": "Upload a file to DiscoDrive. Pass exactly one: content — text, for a text file you write; local_path — absolute path of a file on this machine, any type and size including binary (streamed from disk). path is folder/name, or an existing folder to keep the local name. Returns the stored node with its sha256 content_hash.",
-      "desc_remote": "Upload a text file to DiscoDrive by path (content is text). Binary files (images, archives, PDF) would be corrupted here — upload them with dd-cli on the user's machine: dd-cli put <local-file> <dd-path>.",
+      "desc_remote": "Upload a text file to DiscoDrive by path (content is text). Binary files (images, archives, PDF) would be corrupted here — if the user has dd-cli on their machine, they upload with: dd-cli put <local-file> <dd-path>.",
       "msg": {
-        "local_remote": "local_path is not available over the HTTP transport: this server cannot reach files on your machine. Pass text in content, or upload from the user's machine: dd-cli put <local-file> <dd-path>.",
+        "local_remote": "local_path is not available over the HTTP transport: this server cannot reach files on your machine. Pass text in content; for other files, if the user has dd-cli on their machine: dd-cli put <local-file> <dd-path>.",
         "need_one": "Pass exactly one of: content (text) or local_path (absolute path of a file on this machine, any type).",
-        "need_content": "Pass the text to upload in content. For binary files use dd-cli on the user's machine: dd-cli put <local-file> <dd-path>.",
+        "need_content": "Pass the text to upload in content. For binary files, if the user has dd-cli on their machine: dd-cli put <local-file> <dd-path>.",
         "need_name": "path needs a file name (folder/name), got \"{Path}\""
       }
     },
@@ -844,7 +847,9 @@
       "msg": {
         "is_dir": "{Path} is a folder — download files one at a time (list them with dd_files_list)",
         "exists": "{Path} already exists — pass overwrite: true to replace it, or choose another local_path",
-        "hash_mismatch": "the downloaded bytes do not match the server's hash (sha256 {Got}, expected {Want}); nothing was saved"
+        "hash_mismatch": "the downloaded bytes do not match the server's hash (sha256 {Got}, expected {Want}); nothing was saved",
+        "unsafe_name": "the file's name \"{Name}\" would lead outside the folder given in local_path — pass the full path of the file to create in local_path instead",
+        "local_write": "cannot save to {Path}: {Err}. Choose another local_path (an existing folder this machine lets you write to), or ask the user to free or unlock that file."
       }
     }
   }

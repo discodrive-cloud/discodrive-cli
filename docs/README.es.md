@@ -167,6 +167,8 @@ tu disco, y `dd_files_download` guarda un archivo de DiscoDrive en el disco (un 
 existente solo se reemplaza con `overwrite`). Ambos requieren `--allow-changes` y solo
 funcionan con la conexión local (stdio); con `--http` el servidor nunca toca archivos de su
 propia máquina. Desde una terminal, `dd-cli put` / `dd-cli get` hacen lo mismo.
+`dd_files_upload` reemplaza sin preguntar un archivo con el mismo nombre en DiscoDrive — otra
+razón por la que requiere `--allow-changes`.
 
 Para eventos de calendario recurrentes, usa `--tz Europe/Berlin` (MCP: `tz`) para conservar
 la hora local de las reuniones a través de los cambios de horario de verano. Las series nuevas usan por defecto

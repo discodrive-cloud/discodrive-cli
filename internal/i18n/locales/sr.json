@@ -22,7 +22,8 @@
       "not_dir": "nije direktorijum: {Path}",
       "no_path": "ne postoji putanja: {Path}",
       "local_not_abs": "local_path mora biti apsolutna putanja na ovoj mašini: {Path}",
-      "local_is_dir": "{Path} je fascikla — otpremaj datoteke jednu po jednu"
+      "local_is_dir": "{Path} je fascikla — otpremaj datoteke jednu po jednu",
+      "local_read": "ne može da se pročita local_path {Path}: {Err}. Mora biti postojeća datoteka na ovoj mašini koju dd-mcp sme da čita — proveri putanju ili zamoli korisnika za pristup."
     },
     "claude": {
       "config_parse": "Claude konfiguracija {Path} ne može da se parsira"
@@ -44,11 +45,11 @@
     "file_read_too_large": "Datoteka prelazi ograničenje čitanja teksta od 1 MiB.",
     "timezone_required": "Наведите IANA временску зону преко --tz (на пример Europe/Berlin).",
     "timezone_invalid": "Неисправна IANA временска зона: {Value}",
-    "file_read_binary": "Ovo je binarna datoteka; dd_files_read vraća samo tekst.",
+    "file_read_binary": "Ova datoteka nije UTF-8 tekst (binarna je, ili je tekst u drugom kodiranju); dd_files_read vraća samo UTF-8 tekst.",
     "file_hint": {
       "download_tool": "Sačuvaj je na disk preko dd_files_download (path: {Path}, local_path: <apsolutna putanja>) ili iz terminala: dd-cli get {Path} <lokalna-datoteka>.",
       "cli_or_enable": "Preuzmi je iz terminala: dd-cli get {Path} <lokalna-datoteka>. Ili zamoli korisnika da uključi dd_files_download: dd-cli setup-claude --allow-changes, pa ponovo pokrenuti asistenta.",
-      "cli": "Preuzmi je preko dd-cli na korisnikovoj mašini: dd-cli get {Path} <lokalna-datoteka>."
+      "cli": "Ako korisnik ima dd-cli na svojoj mašini, on preuzima datoteku neoštećenu: dd-cli get {Path} <lokalna-datoteka>."
     }
   },
   "pair": {
@@ -647,10 +648,12 @@
     },
     "instructions": {
       "intro": "DiscoDrive je lični oblak korisnika: datoteke, kalendari, kontakti, zadaci, obeleživači, muzika, knjige i sačuvane stranice. Ovi alati u njemu deluju u ime korisnika. Putanje do datoteka su putanje sa kosom crtom od korena skladišta, npr. Downloads/app.apk.",
-      "changes_off": "Ovaj server radi bez --allow-changes, pa su ovi alati isključeni i nedostaju: otpremanje datoteka, brisanje, premeštanje i preimenovanje, menjanje postojećih podataka i sve što tera server da preuzme URL (čuvanje stranica, preuzimanja, radio, podkasti). To ih ne čini nemogućim: ako korisnik traži nešto od toga, reci mu da je isključeno i kako da se uključi — pokrenuti `dd-cli setup-claude --allow-changes` (ili dodati --allow-changes komandi dd-mcp u MCP konfiguraciji asistenta), pa ponovo pokrenuti asistenta.",
+      "changes_off": "Ovaj server radi bez --allow-changes, pa su ovi alati isključeni i nedostaju: otpremanje datoteka, brisanje, premeštanje i preimenovanje, menjanje postojećih podataka i sve što tera server da preuzme URL (čuvanje stranica, preuzimanja, radio, podkasti). Uključivanje takođe omogućava da dd_files_upload/dd_files_download prenose bilo koju datoteku između ove mašine i DiscoDrive-a (local_path). To ih ne čini nemogućim: ako korisnik traži nešto od toga, reci mu da je isključeno i kako da se uključi — pokrenuti `dd-cli setup-claude --allow-changes` (ili dodati --allow-changes komandi dd-mcp u MCP konfiguraciji asistenta), pa ponovo pokrenuti asistenta.",
       "local_files": "Prenos datoteka između ove mašine i DiscoDrive-a, bilo kog tipa i veličine, uključujući binarne: dd_files_upload sa local_path i dd_files_download sa local_path. local_path je apsolutna putanja na ovoj mašini; bajtovi idu direktno između diska i servera, ne kroz ovaj razgovor.",
       "cli": "Van MCP-a, komanda dd-cli (instalira se zajedno sa dd-mcp, ista prijava) prenosi bilo koju datoteku iz terminala: `dd-cli put <lokalna-datoteka> <dd-putanja>` i `dd-cli get <dd-putanja> <lokalna-datoteka>`.",
-      "read_limit": "dd_files_read vraća samo tekst, do 1 MiB; za binarne ili veće datoteke koristi načine iznad."
+      "read_limit": "dd_files_read vraća samo tekst, do 1 MiB; za binarne ili veće datoteke koristi načine iznad.",
+      "changes_off_remote": "Ovaj server radi bez --allow-changes, pa su ovi alati isključeni i nedostaju: otpremanje datoteka, brisanje, premeštanje i preimenovanje, menjanje postojećih podataka i sve što tera server da preuzme URL (čuvanje stranica, preuzimanja, radio, podkasti). To ih ne čini nemogućim: ako korisnik traži nešto od toga, reci mu da je isključeno — onaj ko pokreće ovaj server (dd-mcp --http) mora da ga ponovo pokrene sa --allow-changes; podešavanja na korisnikovoj strani to ne menjaju.",
+      "cli_remote": "Ovom serveru se pristupa preko HTTP-a i ne može da dira datoteke na korisnikovoj mašini. Ako korisnik tamo ima komandu dd-cli, ona prenosi bilo koju datoteku iz terminala: `dd-cli put <lokalna-datoteka> <dd-putanja>` i `dd-cli get <dd-putanja> <lokalna-datoteka>`."
     }
   },
   "tool": {
@@ -668,11 +671,11 @@
     },
     "dd_files_upload": {
       "desc": "Otpremiti datoteku u DiscoDrive. Prosledi tačno jedno: content — tekst, za tekstualnu datoteku koju ti pišeš; local_path — apsolutna putanja datoteke na ovoj mašini, bilo kog tipa i veličine, uključujući binarne (strimuje se sa diska). path je fascikla/ime, ili postojeća fascikla da bi se zadržalo lokalno ime. Vraća sačuvani čvor sa sha256 u content_hash.",
-      "desc_remote": "Otpremiti tekstualnu datoteku u DiscoDrive po putanji (content je tekst). Binarne datoteke (slike, arhive, PDF) bi se ovde oštetile — otpremi ih preko dd-cli na korisnikovoj mašini: dd-cli put <lokalna-datoteka> <dd-putanja>.",
+      "desc_remote": "Otpremiti tekstualnu datoteku u DiscoDrive po putanji (content je tekst). Binarne datoteke (slike, arhive, PDF) bi se ovde oštetile — ako korisnik ima dd-cli na svojoj mašini, otprema ih ovako: dd-cli put <lokalna-datoteka> <dd-putanja>.",
       "msg": {
-        "local_remote": "local_path nije dostupan preko HTTP transporta: ovaj server ne može da pristupi datotekama tvoje mašine. Prosledi tekst u content ili otpremi sa korisnikove mašine: dd-cli put <lokalna-datoteka> <dd-putanja>.",
+        "local_remote": "local_path nije dostupan preko HTTP transporta: ovaj server ne može da pristupi datotekama tvoje mašine. Prosledi tekst u content; za ostale datoteke, ako korisnik ima dd-cli na svojoj mašini: dd-cli put <lokalna-datoteka> <dd-putanja>.",
         "need_one": "Prosledi tačno jedno od: content (tekst) ili local_path (apsolutna putanja datoteke na ovoj mašini, bilo kog tipa).",
-        "need_content": "Prosledi tekst za otpremanje u content. Za binarne datoteke koristi dd-cli na korisnikovoj mašini: dd-cli put <lokalna-datoteka> <dd-putanja>.",
+        "need_content": "Prosledi tekst za otpremanje u content. Za binarne datoteke, ako korisnik ima dd-cli na svojoj mašini: dd-cli put <lokalna-datoteka> <dd-putanja>.",
         "need_name": "path mora da sadrži ime datoteke (fascikla/ime), dobijeno \"{Path}\""
       }
     },
@@ -844,7 +847,9 @@
       "msg": {
         "is_dir": "{Path} je fascikla — preuzimaj datoteke jednu po jednu (spisak preko dd_files_list)",
         "exists": "{Path} već postoji — prosledi overwrite: true da je zameniš, ili izaberi drugi local_path",
-        "hash_mismatch": "preuzeti bajtovi se ne poklapaju sa heš vrednošću servera (sha256 {Got}, očekivano {Want}); ništa nije sačuvano"
+        "hash_mismatch": "preuzeti bajtovi se ne poklapaju sa heš vrednošću servera (sha256 {Got}, očekivano {Want}); ništa nije sačuvano",
+        "unsafe_name": "ime datoteke \"{Name}\" bi izvelo van fascikle zadate u local_path — umesto toga prosledi u local_path punu putanju datoteke koju treba napraviti",
+        "local_write": "ne može da se sačuva u {Path}: {Err}. Izaberi drugi local_path (postojeću fasciklu u koju ova mašina dozvoljava upis) ili zamoli korisnika da oslobodi ili otključa tu datoteku."
       }
     }
   }

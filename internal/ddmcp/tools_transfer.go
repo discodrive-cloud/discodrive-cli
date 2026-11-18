@@ -52,7 +52,7 @@ func uploadDescription(o serverOptions) string {
 
 // uploadSchema drops local_path where the client may be on another machine, so the
 // model is not offered a parameter that can only fail.
-func uploadSchema(o serverOptions) any {
+func uploadSchema(o serverOptions) *jsonschema.Schema {
 	s, err := jsonschema.For[uploadInput](nil)
 	if err != nil {
 		panic(err) // a static struct: fails only on a programming error, caught by tests
@@ -85,12 +85,12 @@ func upload(ctx context.Context, c *ddclient.Client, o serverOptions, in uploadI
 		return c.Upload(ctx, parent.ID, name, strings.NewReader(*in.Content), time.Time{})
 	}
 
-	if !filepath.IsAbs(in.LocalPath) {
-		return ddclient.Node{}, errors.New(i18n.T("err.files.local_not_abs", i18n.M{"Path": in.LocalPath}))
+	if err := requireAbs(in.LocalPath); err != nil {
+		return ddclient.Node{}, err
 	}
 	f, err := os.Open(in.LocalPath)
 	if err != nil {
-		return ddclient.Node{}, err
+		return ddclient.Node{}, errors.New(i18n.T("err.files.local_read", i18n.M{"Path": in.LocalPath, "Err": err}))
 	}
 	defer f.Close()
 	parent, name, err := uploadTarget(ctx, c, in.Path, filepath.Base(in.LocalPath))
@@ -128,10 +128,12 @@ func uploadTarget(ctx context.Context, c *ddclient.Client, dest, localName strin
 }
 
 // download saves a DiscoDrive file to the local disk: staged beside the destination
-// and renamed into place only after the whole file arrived and its hash matched.
+// and moved into place only after the whole file arrived and its hash matched.
+// Without overwrite an existing file is never replaced, even one that appears while
+// the download runs.
 func download(ctx context.Context, c *ddclient.Client, in downloadInput) (downloadOutput, error) {
-	if !filepath.IsAbs(in.LocalPath) {
-		return downloadOutput{}, errors.New(i18n.T("err.files.local_not_abs", i18n.M{"Path": in.LocalPath}))
+	if err := requireAbs(in.LocalPath); err != nil {
+		return downloadOutput{}, err
 	}
 	node, err := c.Resolve(ctx, in.Path)
 	if err != nil {
@@ -142,26 +144,22 @@ func download(ctx context.Context, c *ddclient.Client, in downloadInput) (downlo
 	}
 	dst := in.LocalPath
 	if fi, err := os.Stat(dst); err == nil && fi.IsDir() {
+		// The name comes from the server: it must not lead out of the chosen folder.
+		if !isLocalName(node.Name) {
+			return downloadOutput{}, errors.New(i18n.T("tool.dd_files_download.msg.unsafe_name", i18n.M{"Name": node.Name}))
+		}
 		dst = filepath.Join(dst, node.Name)
 	}
-	refuseExisting := func() error {
-		if in.Overwrite {
-			return nil
-		}
+	exists := errors.New(i18n.T("tool.dd_files_download.msg.exists", i18n.M{"Path": dst}))
+	if !in.Overwrite {
 		if _, err := os.Lstat(dst); err == nil {
-			return errors.New(i18n.T("tool.dd_files_download.msg.exists", i18n.M{"Path": dst}))
-		} else if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return downloadOutput{}, exists // fail before spending the transfer
 		}
-		return nil
-	}
-	if err := refuseExisting(); err != nil {
-		return downloadOutput{}, err
 	}
 
 	var size int64
 	var sum string
-	err = atomicfile.Write(dst, func(w io.Writer) error {
+	write := func(w io.Writer) error {
 		h := sha256.New()
 		cw := &countingWriter{}
 		if err := c.Download(ctx, node.ID, io.MultiWriter(w, h, cw)); err != nil {
@@ -171,13 +169,40 @@ func download(ctx context.Context, c *ddclient.Client, in downloadInput) (downlo
 		if node.ContentHash != "" && !strings.EqualFold(node.ContentHash, sum) {
 			return errors.New(i18n.T("tool.dd_files_download.msg.hash_mismatch", i18n.M{"Got": sum, "Want": node.ContentHash}))
 		}
-		// Checked again: a file may have appeared there while this one was arriving.
-		return refuseExisting()
-	})
-	if err != nil {
+		return nil
+	}
+	if in.Overwrite {
+		err = atomicfile.Write(dst, write)
+	} else {
+		err = atomicfile.WriteNew(dst, write)
+	}
+	var pathErr *fs.PathError
+	var linkErr *os.LinkError
+	switch {
+	case errors.Is(err, atomicfile.ErrExists):
+		return downloadOutput{}, exists
+	case errors.As(err, &pathErr), errors.As(err, &linkErr):
+		// The disk said no (read-only file, no such folder, no space): name the way out.
+		return downloadOutput{}, errors.New(i18n.T("tool.dd_files_download.msg.local_write", i18n.M{"Path": dst, "Err": err}))
+	case err != nil:
 		return downloadOutput{}, err
 	}
 	return downloadOutput{Path: in.Path, LocalPath: dst, Size: size, ContentHash: sum}, nil
+}
+
+// requireAbs: local_path is read against dd-mcp's own working directory, which the
+// assistant cannot see, so only an absolute path means the same to both.
+func requireAbs(p string) error {
+	if !filepath.IsAbs(p) {
+		return errors.New(i18n.T("err.files.local_not_abs", i18n.M{"Path": p}))
+	}
+	return nil
+}
+
+// isLocalName: a single path element that stays inside the folder it is joined to,
+// on every OS (a backslash is a separator on Windows and allowed in a server name).
+func isLocalName(name string) bool {
+	return name != "." && !strings.ContainsAny(name, `/\`) && filepath.IsLocal(name)
 }
 
 type countingWriter struct{ n int64 }
@@ -197,7 +222,7 @@ func isText(s string) bool {
 func fetchHint(o serverOptions, path string) string {
 	m := i18n.M{"Path": path}
 	switch {
-	case o.LocalFiles && o.AllowChanges:
+	case o.localTransfer():
 		return i18n.T("err.file_hint.download_tool", m)
 	case o.LocalFiles:
 		return i18n.T("err.file_hint.cli_or_enable", m)

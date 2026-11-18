@@ -35,7 +35,7 @@ func bookmarkNames(specs []toolSpec) map[string]bool {
 }
 
 func TestBookmarksDefaultHidesChanging(t *testing.T) {
-	got := bookmarkNames(selectTools(bookmarkToolSpecs(), stdio(false)))
+	got := bookmarkNames(selectTools(bookmarkToolSpecs(), stdioOptions(false)))
 	for _, want := range []string{"dd_bookmarks_list", "dd_bookmarks_add"} {
 		if !got[want] {
 			t.Fatalf("read-only tool %q must be available by default", want)
@@ -49,7 +49,7 @@ func TestBookmarksDefaultHidesChanging(t *testing.T) {
 }
 
 func TestBookmarksAllowChangesExposesAll(t *testing.T) {
-	got := bookmarkNames(selectTools(bookmarkToolSpecs(), stdio(true)))
+	got := bookmarkNames(selectTools(bookmarkToolSpecs(), stdioOptions(true)))
 	for _, want := range []string{"dd_bookmarks_update", "dd_bookmarks_delete"} {
 		if !got[want] {
 			t.Fatalf("changing tool %q must appear under --allow-changes", want)

@@ -22,6 +22,27 @@ type serverOptions struct {
 	LocalFiles bool
 }
 
+// stdioOptions: the client launched dd-mcp itself and shares its machine.
+func stdioOptions(allowChanges bool) serverOptions {
+	return serverOptions{AllowChanges: allowChanges, LocalFiles: true}
+}
+
+// httpOptions: the client may be anywhere, so no local files.
+func httpOptions(allowChanges bool) serverOptions {
+	return serverOptions{AllowChanges: allowChanges}
+}
+
+// offers reports whether a tool belongs on this server.
+func (o serverOptions) offers(sp toolSpec) bool {
+	return (o.AllowChanges || !sp.Changing) && (o.LocalFiles || !sp.LocalOnly)
+}
+
+// localTransfer: files can move between this machine and DiscoDrive through the
+// tools themselves (dd_files_upload/dd_files_download with local_path).
+func (o serverOptions) localTransfer() bool {
+	return o.AllowChanges && o.LocalFiles
+}
+
 // allToolSpecs is every tool the server knows about, before the gates.
 func allToolSpecs(o serverOptions) []toolSpec {
 	return slices.Concat(toolSpecs(o), pimToolSpecs(), mediaToolSpecs(), bookmarkToolSpecs(), savedToolSpecs())
@@ -34,7 +55,7 @@ func buildServer(c *ddclient.Client, o serverOptions) *mcp.Server {
 	for _, sp := range selectTools(allToolSpecs(o), o) {
 		t := &mcp.Tool{Name: sp.Name, Description: sp.Description}
 		if sp.InputSchema != nil {
-			t.InputSchema = sp.InputSchema(o)
+			t.InputSchema = sp.InputSchema
 		}
 		sp.register(s, c, t)
 	}
@@ -46,14 +67,24 @@ func buildServer(c *ddclient.Client, o serverOptions) *mcp.Server {
 // finds the way to a task — or tells the user how to enable it — instead of deciding
 // that it cannot be done.
 func serverInstructions(o serverOptions) string {
+	// Over HTTP the client config is not the one that starts the server, and dd-cli
+	// may not be where the user is: the texts say so instead of giving local advice.
 	parts := []string{i18n.T("mcp.instructions.intro")}
-	if !o.AllowChanges {
+	switch {
+	case !o.AllowChanges && o.LocalFiles:
 		parts = append(parts, i18n.T("mcp.instructions.changes_off"))
+	case !o.AllowChanges:
+		parts = append(parts, i18n.T("mcp.instructions.changes_off_remote"))
 	}
-	if o.AllowChanges && o.LocalFiles {
+	if o.localTransfer() {
 		parts = append(parts, i18n.T("mcp.instructions.local_files"))
 	}
-	parts = append(parts, i18n.T("mcp.instructions.cli"), i18n.T("mcp.instructions.read_limit"))
+	if o.LocalFiles {
+		parts = append(parts, i18n.T("mcp.instructions.cli"))
+	} else {
+		parts = append(parts, i18n.T("mcp.instructions.cli_remote"))
+	}
+	parts = append(parts, i18n.T("mcp.instructions.read_limit"))
 	return strings.Join(parts, "\n\n")
 }
 
@@ -64,8 +95,7 @@ func Run(ctx context.Context, allowChanges bool, profile string) error {
 	if err != nil {
 		return err
 	}
-	o := serverOptions{AllowChanges: allowChanges, LocalFiles: true}
-	return buildServer(newClient(p), o).Run(ctx, &mcp.StdioTransport{})
+	return buildServer(newClient(p), stdioOptions(allowChanges)).Run(ctx, &mcp.StdioTransport{})
 }
 
 // configLookup looks up a profile in the saved cli.json (a wrapper for resolveCreds).

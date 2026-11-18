@@ -167,6 +167,8 @@ Festplatte hoch, und `dd_files_download` speichert eine DiscoDrive-Datei auf die
 (eine vorhandene Datei wird nur mit `overwrite` ersetzt). Beide erfordern `--allow-changes`
 und funktionieren nur über die lokale (stdio-)Verbindung; über `--http` berührt der Server
 keine Dateien seines eigenen Rechners. Im Terminal erledigen `dd-cli put` / `dd-cli get` dasselbe.
+`dd_files_upload` ersetzt eine gleichnamige Datei in DiscoDrive ohne Nachfrage — ein weiterer
+Grund, warum es `--allow-changes` erfordert.
 
 Verwenden Sie für wiederkehrende Kalendertermine `--tz Europe/Berlin` (MCP: `tz`), damit
 lokale Besprechungszeiten über Sommer-/Winterzeitumstellungen hinweg erhalten bleiben. Neue Serien verwenden standardmäßig

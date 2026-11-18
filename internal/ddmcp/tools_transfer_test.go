@@ -32,6 +32,8 @@ type fakeDrive struct {
 	badHash bool
 	// modified is the modified_at field of the last upload.
 	modified string
+	// onContent, if set, runs while a file's bytes are being served.
+	onContent func()
 }
 
 func newFakeDrive(t *testing.T) (*fakeDrive, string) {
@@ -58,8 +60,11 @@ func newFakeDrive(t *testing.T) (*fakeDrive, string) {
 	})
 	mux.HandleFunc("GET /files/{id}/content", func(w http.ResponseWriter, r *http.Request) {
 		d.mu.Lock()
-		b := d.content[r.PathValue("id")]
+		b, hook := d.content[r.PathValue("id")], d.onContent
 		d.mu.Unlock()
+		if hook != nil {
+			hook()
+		}
 		_, _ = w.Write(b)
 	})
 	mux.HandleFunc("POST /files/upload", func(w http.ResponseWriter, r *http.Request) {
@@ -198,23 +203,40 @@ func TestInstructionsDependOnMode(t *testing.T) {
 		name              string
 		o                 serverOptions
 		changesOff, local bool
+		remote            bool
 	}{
-		{"stdio default", stdio(false), true, false},
-		{"stdio allow-changes", stdio(true), false, true},
-		{"http default", serverOptions{}, true, false},
-		{"http allow-changes", serverOptions{AllowChanges: true}, false, false},
+		{"stdio default", stdioOptions(false), true, false, false},
+		{"stdio allow-changes", stdioOptions(true), false, true, false},
+		{"http default", httpOptions(false), true, false, true},
+		{"http allow-changes", httpOptions(true), false, false, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := connect(t, api, tc.o).InitializeResult().Instructions
-			if !strings.Contains(got, "dd-cli put") || !strings.Contains(got, "dd-cli get") {
+			has := func(s string) bool { return strings.Contains(got, s) }
+			if !has("dd-cli put") || !has("dd-cli get") {
 				t.Errorf("instructions must name dd-cli put/get:\n%s", got)
 			}
-			if off := strings.Contains(got, "dd-cli setup-claude --allow-changes"); off != tc.changesOff {
+			if off := has("without --allow-changes"); off != tc.changesOff {
 				t.Errorf("block about switched-off tools present=%v, want %v:\n%s", off, tc.changesOff, got)
 			}
-			if local := strings.Contains(got, "local_path"); local != tc.local {
-				t.Errorf("local_path mentioned=%v, want %v:\n%s", local, tc.local, got)
+			// The block on moving files through the tools themselves.
+			if local := has("absolute path on this machine"); local != tc.local {
+				t.Errorf("local transfer block present=%v, want %v:\n%s", local, tc.local, got)
+			}
+			if tc.remote {
+				// setup-claude edits the local client config, not a running dd-mcp --http;
+				// and dd-cli need not be where the user is.
+				for _, banned := range []string{"setup-claude", "local_path", "installed together"} {
+					if has(banned) {
+						t.Errorf("HTTP instructions must not mention %q:\n%s", banned, got)
+					}
+				}
+				if tc.changesOff && !has("dd-mcp --http") {
+					t.Errorf("HTTP instructions must say the server is restarted with --allow-changes:\n%s", got)
+				}
+			} else if tc.changesOff && (!has("setup-claude") || !has("local_path")) {
+				t.Errorf("stdio instructions must name setup-claude and what enabling adds (local_path):\n%s", got)
 			}
 			if lines := strings.Count(got, "\n") + 1; lines > 15 {
 				t.Errorf("instructions are %d lines; keep them short", lines)
@@ -227,7 +249,7 @@ func TestInstructionsDependOnMode(t *testing.T) {
 
 func TestHTTPTransportHasNoLocalFileAccess(t *testing.T) {
 	_, api := newFakeDrive(t)
-	cs := connect(t, api, serverOptions{AllowChanges: true})
+	cs := connect(t, api, httpOptions(true))
 	res, err := cs.ListTools(t.Context(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -249,7 +271,7 @@ func TestHTTPTransportHasNoLocalFileAccess(t *testing.T) {
 	wantToolError(t, call(t, cs, "dd_files_upload", map[string]any{"path": "Downloads/x", "local_path": local}))
 
 	// Even if the schema let it through, the handler refuses.
-	_, err = upload(t.Context(), ddclient.New(api, "tok"), serverOptions{AllowChanges: true},
+	_, err = upload(t.Context(), ddclient.New(api, "tok"), httpOptions(true),
 		uploadInput{Path: "Downloads/x", LocalPath: local})
 	if err == nil || !strings.Contains(err.Error(), "HTTP") {
 		t.Fatalf("upload with local_path over HTTP: err=%v", err)
@@ -258,7 +280,7 @@ func TestHTTPTransportHasNoLocalFileAccess(t *testing.T) {
 
 func TestStdioOffersLocalPath(t *testing.T) {
 	_, api := newFakeDrive(t)
-	res, err := connect(t, api, stdio(true)).ListTools(t.Context(), nil)
+	res, err := connect(t, api, stdioOptions(true)).ListTools(t.Context(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +309,7 @@ func TestUploadLocalBinaryIntoExistingFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res := call(t, connect(t, api, stdio(true)), "dd_files_upload", map[string]any{"path": "Downloads", "local_path": local})
+	res := call(t, connect(t, api, stdioOptions(true)), "dd_files_upload", map[string]any{"path": "Downloads", "local_path": local})
 	var out nodeOut
 	if err := json.Unmarshal(mustStructured(t, res), &out); err != nil {
 		t.Fatal(err)
@@ -309,7 +331,7 @@ func TestUploadLocalUnderNewName(t *testing.T) {
 	local := filepath.Join(t.TempDir(), "app.apk")
 	_ = os.WriteFile(local, []byte{0, 1, 2}, 0o600)
 
-	res := call(t, connect(t, api, stdio(true)), "dd_files_upload", map[string]any{"path": "Downloads/renamed.apk", "local_path": local})
+	res := call(t, connect(t, api, stdioOptions(true)), "dd_files_upload", map[string]any{"path": "Downloads/renamed.apk", "local_path": local})
 	mustStructured(t, res)
 	if _, ok := d.file("dl", "renamed.apk"); !ok {
 		t.Fatal("expected Downloads/renamed.apk")
@@ -318,7 +340,7 @@ func TestUploadLocalUnderNewName(t *testing.T) {
 
 func TestUploadTextStillWorks(t *testing.T) {
 	d, api := newFakeDrive(t)
-	cs := connect(t, api, stdio(true))
+	cs := connect(t, api, stdioOptions(true))
 	mustStructured(t, call(t, cs, "dd_files_upload", map[string]any{"path": "Downloads/note.md", "content": "# hi"}))
 	if got, _ := d.file("dl", "note.md"); string(got) != "# hi" {
 		t.Fatalf("stored %q", got)
@@ -332,7 +354,7 @@ func TestUploadTextStillWorks(t *testing.T) {
 
 func TestUploadArgumentErrorsSayWhatToPass(t *testing.T) {
 	_, api := newFakeDrive(t)
-	cs := connect(t, api, stdio(true))
+	cs := connect(t, api, stdioOptions(true))
 	local := filepath.Join(t.TempDir(), "a.bin")
 	_ = os.WriteFile(local, []byte{0}, 0o600)
 
@@ -343,7 +365,7 @@ func TestUploadArgumentErrorsSayWhatToPass(t *testing.T) {
 	wantToolError(t, call(t, cs, "dd_files_upload", map[string]any{"path": "Downloads", "content": "x"}), "file name")
 
 	// Over HTTP the only option is content, and the error says so.
-	http := connect(t, api, serverOptions{AllowChanges: true})
+	http := connect(t, api, httpOptions(true))
 	wantToolError(t, call(t, http, "dd_files_upload", map[string]any{"path": "Downloads/a"}), "content", "dd-cli put")
 }
 
@@ -355,7 +377,7 @@ func TestDownloadBinaryIntoFolder(t *testing.T) {
 	d.seed("dl", "test.bin", data)
 	dir := t.TempDir()
 
-	res := call(t, connect(t, api, stdio(true)), "dd_files_download", map[string]any{"path": "Downloads/test.bin", "local_path": dir})
+	res := call(t, connect(t, api, stdioOptions(true)), "dd_files_download", map[string]any{"path": "Downloads/test.bin", "local_path": dir})
 	var out downloadOutput
 	if err := json.Unmarshal(mustStructured(t, res), &out); err != nil {
 		t.Fatal(err)
@@ -374,7 +396,7 @@ func TestDownloadOverwriteOnlyWhenAsked(t *testing.T) {
 	d.seed("dl", "a.bin", []byte("new"))
 	dst := filepath.Join(t.TempDir(), "a.bin")
 	_ = os.WriteFile(dst, []byte("old"), 0o600)
-	cs := connect(t, api, stdio(true))
+	cs := connect(t, api, stdioOptions(true))
 
 	wantToolError(t, call(t, cs, "dd_files_download", map[string]any{"path": "Downloads/a.bin", "local_path": dst}), "overwrite")
 	if b, _ := os.ReadFile(dst); string(b) != "old" {
@@ -392,7 +414,7 @@ func TestDownloadHashMismatchSavesNothing(t *testing.T) {
 	d.badHash = true
 	dir := t.TempDir()
 
-	wantToolError(t, call(t, connect(t, api, stdio(true)), "dd_files_download",
+	wantToolError(t, call(t, connect(t, api, stdioOptions(true)), "dd_files_download",
 		map[string]any{"path": "Downloads/a.bin", "local_path": filepath.Join(dir, "a.bin")}), "hash")
 	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
 		t.Fatalf("left behind: %v", entries)
@@ -401,7 +423,7 @@ func TestDownloadHashMismatchSavesNothing(t *testing.T) {
 
 func TestDownloadErrors(t *testing.T) {
 	_, api := newFakeDrive(t)
-	cs := connect(t, api, stdio(true))
+	cs := connect(t, api, stdioOptions(true))
 	wantToolError(t, call(t, cs, "dd_files_download", map[string]any{"path": "Downloads", "local_path": t.TempDir()}), "folder")
 	wantToolError(t, call(t, cs, "dd_files_download", map[string]any{"path": "Downloads/x", "local_path": "x"}), "absolute")
 }
@@ -418,9 +440,9 @@ func TestReadBinaryOrLargeNamesTheWayOut(t *testing.T) {
 		o    serverOptions
 		want []string
 	}{
-		{"stdio allow-changes", stdio(true), []string{"dd_files_download", "dd-cli get Downloads/"}},
-		{"stdio default", stdio(false), []string{"dd-cli get Downloads/", "--allow-changes"}},
-		{"http", serverOptions{AllowChanges: true}, []string{"dd-cli get Downloads/"}},
+		{"stdio allow-changes", stdioOptions(true), []string{"dd_files_download", "dd-cli get Downloads/"}},
+		{"stdio default", stdioOptions(false), []string{"dd-cli get Downloads/", "--allow-changes"}},
+		{"http", httpOptions(true), []string{"dd-cli get Downloads/"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -439,9 +461,85 @@ func TestReadBinaryOrLargeNamesTheWayOut(t *testing.T) {
 func TestReadTextStillWorks(t *testing.T) {
 	d, api := newFakeDrive(t)
 	d.seed("dl", "note.md", []byte("привет"))
-	res := call(t, connect(t, api, stdio(false)), "dd_files_read", map[string]any{"path": "Downloads/note.md"})
+	res := call(t, connect(t, api, stdioOptions(false)), "dd_files_read", map[string]any{"path": "Downloads/note.md"})
 	var out readOutput
 	if err := json.Unmarshal(mustStructured(t, res), &out); err != nil || out.Content != "привет" {
 		t.Fatalf("read = %+v, err=%v", out, err)
 	}
+}
+
+// --- review follow-ups ---
+
+func TestIsLocalName(t *testing.T) {
+	for _, bad := range []string{"..", ".", "", "a/b", `..\x`, `a\b`, "/abs"} {
+		if isLocalName(bad) {
+			t.Errorf("isLocalName(%q) = true", bad)
+		}
+	}
+	for _, good := range []string{"a.bin", "..hidden", "a..b", "файл.txt"} {
+		if !isLocalName(good) {
+			t.Errorf("isLocalName(%q) = false", good)
+		}
+	}
+}
+
+func TestDownloadNeverLeavesTheFolder(t *testing.T) {
+	d, api := newFakeDrive(t)
+	for _, name := range []string{"..", ".", `..\x`} {
+		d.seed("dl", name, []byte("evil"))
+	}
+	cs := connect(t, api, stdioOptions(true))
+	base := t.TempDir()
+	dir := filepath.Join(base, "inside")
+	_ = os.Mkdir(dir, 0o700)
+	for _, name := range []string{"..", ".", `..\x`} {
+		res := call(t, cs, "dd_files_download", map[string]any{"path": "Downloads/" + name, "local_path": dir, "overwrite": true})
+		wantToolError(t, res, "outside")
+	}
+	for _, d := range []string{base, dir} {
+		entries, _ := os.ReadDir(d)
+		for _, e := range entries {
+			if e.Name() != "inside" {
+				t.Errorf("%s: unexpected %s", d, e.Name())
+			}
+		}
+	}
+}
+
+// A file that appears at the destination while the download runs is not replaced.
+func TestDownloadDoesNotReplaceFileThatAppears(t *testing.T) {
+	d, api := newFakeDrive(t)
+	d.seed("dl", "a.bin", []byte("ours"))
+	dst := filepath.Join(t.TempDir(), "a.bin")
+	d.onContent = func() { _ = os.WriteFile(dst, []byte("theirs"), 0o600) }
+
+	wantToolError(t, call(t, connect(t, api, stdioOptions(true)), "dd_files_download",
+		map[string]any{"path": "Downloads/a.bin", "local_path": dst}), "overwrite")
+	if b, _ := os.ReadFile(dst); string(b) != "theirs" {
+		t.Fatalf("replaced: %q", b)
+	}
+}
+
+func TestDownloadUnwritableDestinationNamesTheWayOut(t *testing.T) {
+	d, api := newFakeDrive(t)
+	d.seed("dl", "a.bin", []byte("x"))
+	dst := filepath.Join(t.TempDir(), "missing", "a.bin")
+	wantToolError(t, call(t, connect(t, api, stdioOptions(true)), "dd_files_download",
+		map[string]any{"path": "Downloads/a.bin", "local_path": dst}), "another local_path")
+}
+
+func TestUploadUnreadableLocalPathNamesTheWayOut(t *testing.T) {
+	_, api := newFakeDrive(t)
+	missing := filepath.Join(t.TempDir(), "nope.bin")
+	wantToolError(t, call(t, connect(t, api, stdioOptions(true)), "dd_files_upload",
+		map[string]any{"path": "Downloads", "local_path": missing}), "cannot read local_path", "check the path")
+}
+
+// Text in another encoding is refused like a binary file, and the error leads to a
+// lossless download instead.
+func TestReadNonUTF8LeadsToDownload(t *testing.T) {
+	d, api := newFakeDrive(t)
+	d.seed("dl", "cp1251.txt", []byte{0xcf, 0xf0, 0xe8, 0xe2, 0xe5, 0xf2}) // "Привет" in cp1251
+	wantToolError(t, call(t, connect(t, api, stdioOptions(true)), "dd_files_read",
+		map[string]any{"path": "Downloads/cp1251.txt"}), "not UTF-8", "dd_files_download")
 }
