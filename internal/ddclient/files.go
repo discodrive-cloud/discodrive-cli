@@ -283,11 +283,16 @@ func (c *Client) UploadFile(ctx context.Context, parentID, name string, f *os.Fi
 	return c.Upload(ctx, parentID, name, f, fi.ModTime())
 }
 
-// Upload uploads file name into parentID ("" = root) via multipart. The body is streamed
-// through an io.Pipe rather than assembled in memory. modTime is the file's own date,
+// Upload uploads file name into parentID ("" = root). modTime is the file's own date,
 // which the server stores instead of dating the upload; the zero time sends nothing.
 // The bytes are hashed on the way out and checked against the hash the server reports
 // for what it stored; a server that reports none is not checked.
+//
+// A file above chunkedThreshold goes through the resumable chunked API (see
+// uploadChunked): a proxy in front of the server may cap a request body — Cloudflare
+// refuses anything over 100 MB with 413 — and a lost connection then costs one chunk,
+// not the whole file. A smaller file goes in one multipart request, and a 413 for it
+// still falls back to chunks.
 func (c *Client) Upload(ctx context.Context, parentID, name string, r io.Reader, modTime time.Time) (Node, error) {
 	newBody, size, err := replayableBody(r)
 	if err != nil {
@@ -297,7 +302,19 @@ func (c *Client) Upload(ctx context.Context, parentID, name string, r io.Reader,
 	if !modTime.IsZero() {
 		modField = modTime.UTC().Format(time.RFC3339Nano)
 	}
+	if size > chunkedThreshold {
+		return c.uploadChunked(ctx, parentID, name, newBody, size, modField)
+	}
+	node, err := c.uploadMultipart(ctx, parentID, name, newBody, size, modField)
+	if IsAPIStatus(err, http.StatusRequestEntityTooLarge) {
+		return c.uploadChunked(ctx, parentID, name, newBody, size, modField)
+	}
+	return node, err
+}
 
+// uploadMultipart sends the whole file in one POST /files/upload. The body is streamed
+// through an io.Pipe rather than assembled in memory.
+func (c *Client) uploadMultipart(ctx context.Context, parentID, name string, newBody func() (io.Reader, error), size int64, modField string) (Node, error) {
 	for attempt := 0; attempt < 2; attempt++ {
 		tok, err := c.token(ctx)
 		if err != nil {
@@ -353,10 +370,18 @@ func (c *Client) Upload(ctx context.Context, parentID, name string, r io.Reader,
 			}
 			_ = pw.CloseWithError(werr)
 		}()
+		// finish stops the writer and waits for it to let go of src. Every exit from this
+		// attempt goes through it: a server (or proxy) that answers before reading the
+		// whole body leaves the writer blocked mid-copy, and the next attempt — a 401
+		// retry or the chunked fallback — rewinds that same source.
+		finish := func() string {
+			_ = pr.Close()
+			return <-sent
+		}
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/files/upload", pr)
 		if err != nil {
-			_ = pr.CloseWithError(err) // unblocks the writer goroutine
+			finish()
 			return Node{}, err
 		}
 		req.ContentLength = overhead + size
@@ -364,34 +389,46 @@ func (c *Client) Upload(ctx context.Context, parentID, name string, r io.Reader,
 		req.Header.Set("Content-Type", mw.FormDataContentType())
 		resp, err := c.hc.Do(req)
 		if err != nil {
+			finish()
 			return Node{}, err
 		}
 		if resp.StatusCode == http.StatusUnauthorized && attempt == 0 {
 			resp.Body.Close()
+			finish()
 			c.clearJWT()
 			continue
 		}
-		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusCreated {
-			return Node{}, readError(resp, "POST /files/upload")
+			err := readError(resp, "POST /files/upload")
+			resp.Body.Close()
+			finish()
+			return Node{}, err
 		}
 		var out struct {
 			Node       Node `json:"node"`
 			Conflicted bool `json:"conflicted"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		err = json.NewDecoder(resp.Body).Decode(&out)
+		resp.Body.Close()
+		want := finish()
+		if err != nil {
 			return Node{}, err
 		}
-		// A server that answered before reading the whole body leaves the writer blocked:
-		// closing the pipe ends it, and the hash is then "" (nothing to compare).
-		_ = pr.Close()
-		want := <-sent
-		if got := strings.ToLower(out.Node.ContentHash); got != "" && want != "" && got != want {
-			return out.Node, errors.New(i18n.T("err.upload_hash_mismatch", i18n.M{"Got": got, "Want": want}))
+		if err := checkStoredHash(out.Node, want); err != nil {
+			return out.Node, err
 		}
 		return out.Node, nil
 	}
 	return Node{}, errors.New(i18n.T("err.auth_failed"))
+}
+
+// checkStoredHash compares the hash the server reports for what it stored with the hex
+// sha256 of what was sent. Either side being unknown ("") skips the check.
+func checkStoredHash(n Node, want string) error {
+	if got := strings.ToLower(n.ContentHash); got != "" && want != "" && got != want {
+		return errors.New(i18n.T("err.upload_hash_mismatch", i18n.M{"Got": got, "Want": want}))
+	}
+	return nil
 }
 
 // SearchHit is a matched node together with its full path.

@@ -8,6 +8,7 @@
     "server_status": "el servidor devolvió {Status}: {Message}",
     "auth_failed": "error de autorización",
     "upload_hash_mismatch": "el servidor guardó bytes distintos de los enviados (sha256 {Got}, se esperaba {Want}): vuelva a subir el archivo",
+    "upload_source_changed": "el archivo cambió durante la subida ({Sent} de {Size} bytes enviados): espere a que termine de escribirse y vuelva a subirlo",
     "pair_incomplete": "vinculación no completada: {Status}",
     "session_token_invalid": "token de sesión inválido",
     "session_token_parse": "no se puede analizar el token de sesión",

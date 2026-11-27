@@ -8,6 +8,7 @@
     "server_status": "server returned {Status}: {Message}",
     "auth_failed": "authorization failed",
     "upload_hash_mismatch": "the server stored different bytes than were sent (sha256 {Got}, expected {Want}): upload the file again",
+    "upload_source_changed": "the file changed during upload ({Sent} of {Size} bytes sent): wait until it is fully written and upload it again",
     "pair_incomplete": "pairing not completed: {Status}",
     "session_token_invalid": "invalid session token",
     "session_token_parse": "cannot parse session token",

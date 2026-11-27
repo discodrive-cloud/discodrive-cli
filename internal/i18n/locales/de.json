@@ -8,6 +8,7 @@
     "server_status": "Server antwortete {Status}: {Message}",
     "auth_failed": "Autorisierung fehlgeschlagen",
     "upload_hash_mismatch": "der Server hat andere Bytes gespeichert als gesendet (sha256 {Got}, erwartet {Want}): Datei erneut hochladen",
+    "upload_source_changed": "die Datei hat sich während des Hochladens geändert ({Sent} von {Size} Bytes gesendet): warten, bis sie fertig geschrieben ist, und erneut hochladen",
     "pair_incomplete": "Kopplung nicht abgeschlossen: {Status}",
     "session_token_invalid": "ungültiges Sitzungstoken",
     "session_token_parse": "Sitzungstoken kann nicht geparst werden",

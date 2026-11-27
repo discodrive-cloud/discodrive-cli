@@ -8,6 +8,7 @@
     "server_status": "server je vratio {Status}: {Message}",
     "auth_failed": "autorizacija nije uspela",
     "upload_hash_mismatch": "server je sačuvao drugačije bajtove od poslatih (sha256 {Got}, očekivan {Want}): ponovo otpremite datoteku",
+    "upload_source_changed": "datoteka se promenila tokom otpremanja (poslato {Sent} od {Size} bajtova): sačekajte da se upiše do kraja i ponovo je otpremite",
     "pair_incomplete": "uparivanje nije završeno: {Status}",
     "session_token_invalid": "nevažeći token sesije",
     "session_token_parse": "nije moguće parsirati token sesije",

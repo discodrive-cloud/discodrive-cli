@@ -8,6 +8,7 @@
     "server_status": "le serveur a renvoyé {Status} : {Message}",
     "auth_failed": "échec de l'autorisation",
     "upload_hash_mismatch": "le serveur a enregistré d'autres octets que ceux envoyés (sha256 {Got}, attendu {Want}) : renvoyez le fichier",
+    "upload_source_changed": "le fichier a changé pendant l'envoi ({Sent} octets envoyés sur {Size}) : attendez qu'il soit entièrement écrit et renvoyez-le",
     "pair_incomplete": "appairage non terminé : {Status}",
     "session_token_invalid": "jeton de session invalide",
     "session_token_parse": "impossible d'analyser le jeton de session",
